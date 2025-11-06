@@ -1,4 +1,3 @@
-
 import pygame
 import random
 import math
@@ -10,15 +9,13 @@ from src.entities.enemy import Enemy
 from src.utils.constants import *
 from src.utils.enums import *
 
-
-
 class Game:
     def __init__(self, width, height, fps):
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption("Nano Drone Combat")
         self.clock = pygame.time.Clock()
         self.running = True
-        
+
         # Game world
         self.world_width = 3000
         self.world_height = 3000
@@ -227,5 +224,4 @@ class Game:
             self.update()
             self.draw()
             self.clock.tick(FPS)
-        
-        pygame.quit()
+        # Removed pygame.quit() from here - handled in main.py

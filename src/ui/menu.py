@@ -4,11 +4,8 @@
 import sys
 import pygame as pg
 import os
-import pygame
-from src.game import Game
-from src.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
 
-WIDTH, HEIGHT = 960, 540
+WIDTH, HEIGHT = 1280, 720
 FPS = 120
 
 BG = (250, 251, 255)
@@ -48,24 +45,18 @@ class MenuApp:
             dt = self.clock.tick(FPS) / 1000
             for e in pg.event.get():
                 if e.type == pg.QUIT:
-                    pg.quit(); sys.exit()
+                    return False  # User quit
                 if e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE:
-                    pg.quit(); sys.exit()
+                    return False  # User quit
                 if e.type == pg.MOUSEBUTTONDOWN and e.button == 1:
                     mx, my = pg.mouse.get_pos()
                     if self.start_rect.collidepoint(mx, my):
-                        self.started = True
+                        return True  # Start game
                     elif self.quit_rect.collidepoint(mx, my):
-                        pg.quit(); sys.exit()
+                        return False  # User quit
 
-            # Draw
-            if not self.started:
-                self.draw_menu()
-            else:
-                game = Game(SCREEN_WIDTH, SCREEN_HEIGHT, FPS)
-                game.run()
-                pygame.quit()
-                #self.draw_placeholder()
+            # Draw menu
+            self.draw_menu()
             pg.display.flip()
 
     def button(self, rect: pg.Rect, text: str):
@@ -109,13 +100,6 @@ class MenuApp:
         lbl = self.small.render(text, True, WHITE)
         self.screen.blit(lbl, (WIDTH//2 - lbl.get_width()//2,
                                HEIGHT - bar_h//2 - lbl.get_height()//2 + 4))
-
-    def draw_placeholder(self):
-        self.screen.fill((245, 246, 250))
-        msg = self.big.render("Add Game Scene Here", True, TITLE_COLOR)
-        tip = self.font.render("(Game has started. Add the necessary code here.)", True, SUB_COLOR)
-        self.screen.blit(msg, (WIDTH//2 - msg.get_width()//2, HEIGHT//2 - 20))
-        self.screen.blit(tip, (WIDTH//2 - tip.get_width()//2, HEIGHT//2 + 18))
 
 if __name__ == "__main__":
     MenuApp().run()
