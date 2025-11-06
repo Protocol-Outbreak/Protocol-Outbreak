@@ -1,0 +1,8 @@
+# Core game engine
+pygame==2.5.2
+
+# If you add level editing tools
+pygame-gui==0.6.9
+
+# If you want sound/music management
+pygame-mixer==2.0.0
