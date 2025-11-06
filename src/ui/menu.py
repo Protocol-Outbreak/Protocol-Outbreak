@@ -23,9 +23,9 @@ class MenuApp:
         pg.display.set_caption("Menu UI Only")
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         self.clock = pg.time.Clock()
-        self.font = pg.font.SysFont("consolas", 30)
-        self.big = pg.font.SysFont("consolas", 32, bold=True)
-        self.small = pg.font.SysFont("javanese text", 20)
+        self.font = pg.font.SysFont("ocr a extended", 32)
+        self.big = pg.font.SysFont("ocr a extended", 32) # add , bold=True if you want bold))
+        self.small = pg.font.SysFont("javanese text", 25)
         self.state = "menu"
 
         # Load background image
@@ -79,19 +79,19 @@ class MenuApp:
         # Draw the background image instead of a solid color
         self.screen.blit(self.bg_image, (0, 0))
 
-        title = self.big.render("Protocol: Outbreak", True, WHITE)
-        sub = self.font.render("Initializing sequence...", True, WHITE)
+        title = self.big.render("PROTOCOL: OUTBREAK", True, WHITE)
+        sub = self.font.render("INITIALIZING SEQUENCE...", True, WHITE)
         self.screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//2 - 120))
         self.screen.blit(sub, (WIDTH//2 - sub.get_width()//2, HEIGHT//2 - 65))
-        self.button(self.start_rect, "Start")
-        self.button(self.quit_rect, "Quit")
+        self.button(self.start_rect, "START")
+        self.button(self.quit_rect, "QUIT")
 
         self.developers(["Jason He", "Cristian Gutierrez Espinoza", "Joshua Paulino Ozuna", "Ian Khanna"])
 
     def developers(self, names):
         # Display developer names at the bottom of the screen
         text = "Game created by: " + ", ".join(names)
-        bar_h = 30
+        bar_h = 50
         bar = pg.Surface((WIDTH, bar_h), pg.SRCALPHA)
         bar.fill((0, 0, 0, 110))  # RGBA — last value is alpha (0–255)
         self.screen.blit(bar, (0, HEIGHT - bar_h))
