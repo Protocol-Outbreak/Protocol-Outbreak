@@ -4,9 +4,13 @@ from enum import Enum
 class TankType(Enum):
     BASIC = 1
     TWIN = 2
-    SNIPER = 3
-    MACHINE_GUN = 4
-    FLANK_GUARD = 5
+    TRIPLET = 3
+    QUAD = 4
+    OCTO = 5
+    PENTA_SHOT = 6
+    SNIPER = 7
+    MACHINE_GUN = 8
+    FLANK_GUARD = 9
 
 class EnemyType(Enum):
     SQUARE_TURRET = 1

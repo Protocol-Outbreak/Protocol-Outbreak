@@ -3,6 +3,10 @@ import math
 from src.utils.constants import *
 from src.utils.enums import *
 from src.entities.bullet import Bullet
+from src.systems.tank_renderer import TankRenderer
+from src.systems.attack_system import ShootingSystem
+
+
 
 class Player:
     def __init__(self, x, y):
@@ -20,7 +24,7 @@ class Player:
             'bullet_speed': 5,
             'bullet_penetration': 6,
             'bullet_damage': 5,
-            'reload': 5,
+            'reload': 7,
             'movement_speed': 2
         }
         
@@ -40,7 +44,7 @@ class Player:
         
         # Shooting
         self.shoot_cooldown = 0
-        self.base_reload = 60
+        self.base_reload = 40 # this is for the reload speed
         
         self.size = 35
         
@@ -85,31 +89,10 @@ class Player:
             self.hp = min(self.max_hp, self.hp + regen_amount)
     
     def shoot(self, bullets):
-        if self.shoot_cooldown <= 0:
-            bullet_speed = 10 + (self.stats['bullet_speed'] * 1.5)
-            bullet_damage = 10 + (self.stats['bullet_damage'] * 3)
-            bullet_pen = self.stats['bullet_penetration']
-            
-            if self.tank_type == TankType.BASIC:
-                # Single shot
-                offset = 30
-                bullet_x = self.x + math.cos(self.angle) * offset
-                bullet_y = self.y + math.sin(self.angle) * offset
-                bullets.append(Bullet(bullet_x, bullet_y, self.angle, 
-                                    bullet_speed, bullet_damage, bullet_pen, "player"))
-            elif self.tank_type == TankType.TWIN:
-                # Twin shots
-                offset = 30
-                spread = 10
-                for i in [-1, 1]:
-                    bullet_x = self.x + math.cos(self.angle) * offset + math.cos(self.angle + math.pi/2) * spread * i
-                    bullet_y = self.y + math.sin(self.angle) * offset + math.sin(self.angle + math.pi/2) * spread * i
-                    bullets.append(Bullet(bullet_x, bullet_y, self.angle, 
-                                        bullet_speed, bullet_damage * 0.8, bullet_pen, "player"))
-            
-            self.shoot_cooldown = self.get_reload_speed()
+        ShootingSystem.shoot(self, bullets)
     
     def gain_xp(self, amount):
+        print("gained xp", amount)
         self.xp += amount
         if self.xp >= self.xp_to_next_level:
             self.level_up()
@@ -117,78 +100,31 @@ class Player:
     def level_up(self):
         self.level += 1
         self.xp -= self.xp_to_next_level
-        self.xp_to_next_level = int(self.xp_to_next_level * 1.2)
+        self.xp_to_next_level = int(self.xp_to_next_level * 1) # makes leveling up more difficult
         
         # Award skill point (simplified - should follow diep.io rules)
-        if self.level <= 28:
-            self.skill_points += 1
-        elif self.level == 30:
-            self.skill_points += 1
-        elif self.level > 30 and (self.level - 30) % 3 == 0:
-            self.skill_points += 1
+        self.skill_points += 1
+        if self.level == 2:
+            self.tank_type = TankType.TWIN
+            #self.skill_points += 1
+        elif self.level == 3:
+            self.tank_type = TankType.TWIN
+        elif self.level == 4:
+            self.tank_type = TankType.TRIPLET
+        elif self.level == 5:
+            self.tank_type = TankType.QUAD
+        elif self.level == 6:
+            self.tank_type = TankType.OCTO
+        elif self.level == 7:
+            self.tank_type = TankType.PENTA_SHOT
+        elif self.level == 8:
+            self.tank_type = TankType.SNIPER
+        elif self.level == 9:
+            self.tank_type = TankType.MACHINE_GUN
+        
+            #self.skill_points += 1
+        #elif self.level > 4 and (self.level - 30) % 3 == 0:
+            #self.skill_points += 1
     
     def draw(self, screen, camera_x, camera_y):
-        screen_x = int(self.x - camera_x)
-        screen_y = int(self.y - camera_y)
-        
-        # LAYERING SYSTEM:
-        # Layer 1: Cannons (drawn first, appear behind)
-        # Layer 2: Tank body outline (middle)
-        # Layer 3: Tank body fill (on top)
-        
-        cannon_length = 40
-        cannon_width = 12
-        cannon_color = GREY  # Custom cannon color - change this to whatever you want!
-        
-        # === LAYER 1: DRAW CANNONS FIRST (BEHIND BODY) ===
-        if self.tank_type == TankType.BASIC:
-            end_x = screen_x + math.cos(self.angle) * cannon_length
-            end_y = screen_y + math.sin(self.angle) * cannon_length
-            
-            # Draw cannon rectangle
-            perp_angle = self.angle + math.pi / 2
-            points = [
-                (screen_x + math.cos(perp_angle) * cannon_width/2,
-                 screen_y + math.sin(perp_angle) * cannon_width/2),
-                (screen_x - math.cos(perp_angle) * cannon_width/2,
-                 screen_y - math.sin(perp_angle) * cannon_width/2),
-                (end_x - math.cos(perp_angle) * cannon_width/2,
-                 end_y - math.sin(perp_angle) * cannon_width/2),
-                (end_x + math.cos(perp_angle) * cannon_width/2,
-                 end_y + math.sin(perp_angle) * cannon_width/2)
-            ]
-            pygame.draw.polygon(screen, cannon_color, points)
-            # Optional: Add cannon outline
-            #pygame.draw.polygon(screen, CLEAN_BLUE, points, 2)
-        
-        elif self.tank_type == TankType.TWIN:
-            # Twin cannons
-            spread = 10
-            for i in [-1, 1]:
-                offset_x = screen_x + math.cos(self.angle + math.pi/2) * spread * i
-                offset_y = screen_y + math.sin(self.angle + math.pi/2) * spread * i
-                end_x = offset_x + math.cos(self.angle) * cannon_length
-                end_y = offset_y + math.sin(self.angle) * cannon_length
-                
-                perp_angle = self.angle + math.pi / 2
-                points = [
-                    (offset_x + math.cos(perp_angle) * cannon_width/2,
-                     offset_y + math.sin(perp_angle) * cannon_width/2),
-                    (offset_x - math.cos(perp_angle) * cannon_width/2,
-                     offset_y - math.sin(perp_angle) * cannon_width/2),
-                    (end_x - math.cos(perp_angle) * cannon_width/2,
-                     end_y - math.sin(perp_angle) * cannon_width/2),
-                    (end_x + math.cos(perp_angle) * cannon_width/2,
-                     end_y + math.sin(perp_angle) * cannon_width/2)
-                ]
-                pygame.draw.polygon(screen, cannon_color, points)
-                # Optional: Add cannon outline
-                #pygame.draw.polygon(screen, CLEAN_BLUE, points, 2)
-        
-        # === LAYER 2: DRAW TANK BODY (ON TOP OF CANNONS) ===
-        # Draw filled circle (body interior)
-        pygame.draw.circle(screen, CLEAN_BLUE, (screen_x, screen_y), self.size - 8)
-        
-        # === LAYER 3: DRAW TANK OUTLINE (TOP LAYER) ===
-        # Draw outline circle
-        #pygame.draw.circle(screen, CLEAN_BLUE, (screen_x, screen_y), self.size, 3)
+        TankRenderer.draw_tank(screen, self, camera_x, camera_y)
