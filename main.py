@@ -1,12 +1,15 @@
 import pygame
+from src.ui.menu import MenuApp
 from src.game import Game
 from src.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
 
 def main():
     pygame.init()
-    game = Game(SCREEN_WIDTH, SCREEN_HEIGHT, FPS)
-    game.run()
-    pygame.quit()
+    menu = MenuApp()
+    menu.run()
+    #game = Game(SCREEN_WIDTH, SCREEN_HEIGHT, FPS)
+    #game.run()
+    #pygame.quit()
 
 if __name__ == "__main__":
     main()

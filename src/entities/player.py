@@ -159,7 +159,7 @@ class Player:
             ]
             pygame.draw.polygon(screen, cannon_color, points)
             # Optional: Add cannon outline
-            pygame.draw.polygon(screen, CLEAN_BLUE, points, 2)
+            #pygame.draw.polygon(screen, CLEAN_BLUE, points, 2)
         
         elif self.tank_type == TankType.TWIN:
             # Twin cannons
@@ -187,7 +187,7 @@ class Player:
         
         # === LAYER 2: DRAW TANK BODY (ON TOP OF CANNONS) ===
         # Draw filled circle (body interior)
-        pygame.draw.circle(screen, (20, 40, 80), (screen_x, screen_y), self.size - 8)
+        pygame.draw.circle(screen, CLEAN_BLUE, (screen_x, screen_y), self.size - 8)
         
         # === LAYER 3: DRAW TANK OUTLINE (TOP LAYER) ===
         # Draw outline circle

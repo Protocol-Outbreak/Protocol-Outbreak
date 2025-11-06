@@ -4,6 +4,9 @@
 import sys
 import pygame as pg
 import os
+import pygame
+from src.game import Game
+from src.utils.constants import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
 
 WIDTH, HEIGHT = 960, 540
 FPS = 120
@@ -59,7 +62,10 @@ class MenuApp:
             if not self.started:
                 self.draw_menu()
             else:
-                self.draw_placeholder()
+                game = Game(SCREEN_WIDTH, SCREEN_HEIGHT, FPS)
+                game.run()
+                pygame.quit()
+                #self.draw_placeholder()
             pg.display.flip()
 
     def button(self, rect: pg.Rect, text: str):
