@@ -70,7 +70,7 @@ class Game:
         self.player.update(keys, mouse_pos, self.camera_x, self.camera_y)
         
         # Shooting
-        if mouse_buttons[0]:  # Left click
+        if mouse_buttons[0] or keys[pygame.K_SPACE]:  # Left click and spacebar
             self.player.shoot(self.bullets)
         
         # Update bullets
