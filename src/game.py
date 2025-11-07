@@ -210,7 +210,7 @@ class Game:
         controls = [
             "WASD/Arrows: Move",
             "Mouse: Aim",
-            "Left Click: Shoot",
+            "Left Click/Space: Shoot",
             "1/2: Change Tank"
         ]
         

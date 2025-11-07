@@ -92,7 +92,7 @@ class Player:
         ShootingSystem.shoot(self, bullets)
     
     def gain_xp(self, amount):
-        print("gained xp", amount)
+        print("Gained", amount, "XP")
         self.xp += amount
         if self.xp >= self.xp_to_next_level:
             self.level_up()
