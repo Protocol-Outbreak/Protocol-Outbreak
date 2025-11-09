@@ -21,6 +21,7 @@ def main():
         
         # If result is 'menu', loop back to menu
         # If result is None or anything else, quit
+        # Hitting escape in game returns 'menu'
         if result != 'menu':
             break
     
