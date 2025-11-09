@@ -20,7 +20,7 @@ GRAY = (150, 160, 170)
 class MenuApp:
     def __init__(self):
         pg.init()
-        pg.display.set_caption("Neural Cleanse")
+        pg.display.set_caption("Protocol: Outbreak")
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         self.clock = pg.time.Clock()
         
@@ -132,8 +132,8 @@ class MenuApp:
         self.screen.blit(panel_surface, panel_rect.topleft)
         
         # Title
-        title = self.title_font.render("NEURAL CLEANSE", True, CYAN)
-        title_shadow = self.title_font.render("NEURAL CLEANSE", True, DARK_CYAN)
+        title = self.title_font.render("PROTOCOL: OUTBREAK", True, CYAN)
+        title_shadow = self.title_font.render("PROTOCOL: OUTBREAK", True, DARK_CYAN)
         self.screen.blit(title_shadow, (WIDTH//2 - title.get_width()//2 + 3, 73))
         self.screen.blit(title, (WIDTH//2 - title.get_width()//2, 70))
         
