@@ -241,15 +241,21 @@ class MenuApp:
         # Start Button
         mx, my = pg.mouse.get_pos()
         hovered = self.start_button.collidepoint(mx, my)
-        
+
+        # Create a slightly larger button rect if hovered (pop-out effect)
+        if hovered:
+            button_rect = self.start_button.inflate(20, 8)  # Make it 20px wider, 8px taller
+        else:
+            button_rect = self.start_button
+
         button_color = BRIGHT_CYAN if hovered else CYAN
-        pg.draw.rect(self.screen, button_color, self.start_button)
-        pg.draw.rect(self.screen, WHITE, self.start_button, 2)
-        
+        pg.draw.rect(self.screen, button_color, button_rect)
+        pg.draw.rect(self.screen, WHITE, button_rect, 2)
+
         button_text = self.heading_font.render("INITIATE INFILTRATION", True, DARK_BG)
-        self.screen.blit(button_text, (self.start_button.centerx - button_text.get_width()//2, 
-                                       self.start_button.centery - button_text.get_height()//2))
-        
+        self.screen.blit(button_text, (button_rect.centerx - button_text.get_width()//2, 
+                                    button_rect.centery - button_text.get_height()//2))
+                
         # Warning at bottom
         warning = self.small_font.render("Warning: As you descend deeper, the corruption intensifies. Enemies adapt. Stay alert.", True, (255, 255, 255))
         self.screen.blit(warning, (WIDTH//2 - warning.get_width()//2, HEIGHT - 46))  # Moved up
