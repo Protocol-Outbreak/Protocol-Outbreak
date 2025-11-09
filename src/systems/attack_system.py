@@ -17,8 +17,8 @@ class ShootingSystem:
         
         # Calculate bullet properties
         bullet_speed = 10 + (tank.stats['bullet_speed'] * 1.5)
-        bullet_damage = (10 + (tank.stats['bullet_damage'] * 3)) * config["damage_multiplier"]
-        bullet_pen = tank.stats['bullet_penetration']
+        bullet_damage = (10 + (tank.stats['bullet_damage'] * 3)) * (1 + config["damage_multiplier"])
+        bullet_pen = 1 + tank.stats['bullet_penetration']
         
         # Apply config bonuses
         if "bullet_speed_bonus" in config:

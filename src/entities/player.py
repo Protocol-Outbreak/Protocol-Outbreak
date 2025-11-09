@@ -5,6 +5,8 @@ from src.utils.enums import *
 from src.entities.bullet import Bullet
 from src.systems.tank_renderer import TankRenderer
 from src.systems.attack_system import ShootingSystem
+from src.configs.tank_configs import TANK_CONFIGS
+
 
 
 
@@ -18,20 +20,24 @@ class Player:
         
         # Stats (0-7 points each)
         self.stats = {
-            'health_regen': 3,
-            'max_health': 2,
+            'health_regen': 0,
+            'max_health': 0,
             'body_damage': 0,
-            'bullet_speed': 5,
-            'bullet_penetration': 6,
-            'bullet_damage': 5,
-            'reload': 7,
-            'movement_speed': 2
+            'bullet_speed': 0,
+            'bullet_penetration': 0,
+            'bullet_damage': 0,
+            'reload': 0,
+            'movement_speed': 0
         }
         
         self.level = 1
         self.xp = 0
         self.xp_to_next_level = 100
         self.skill_points = 0
+        
+        # Tank Default
+        tank_default = TANK_CONFIGS.get(self.tank_type.name)
+
         
         # Health
         self.max_hp = 100 + (self.stats['max_health'] * 20)
@@ -44,8 +50,8 @@ class Player:
         
         # Shooting
         self.shoot_cooldown = 0
-        self.base_reload = 40 # this is for the reload speed
-        
+        self.base_reload = 40 * tank_default['reload_speed'] # set tank reload to the base of current tank type
+         
         self.size = 35
         
     def get_reload_speed(self):
@@ -85,15 +91,14 @@ class Player:
         # Health regeneration (simplified)
         current_time = pygame.time.get_ticks()
         if current_time - self.last_damage_time > 5000:  # 5 seconds no damage
-            regen_amount = 0.5 + (self.stats['health_regen'] * 0.3)
+            regen_amount = 0.5 + ((self.stats['health_regen'] + 1) * 0.3)
             self.hp = min(self.max_hp, self.hp + regen_amount)
     
     def shoot(self, bullets):
         ShootingSystem.shoot(self, bullets)
     
     def gain_xp(self, amount):
-        print("Gained", amount, "XP")
-        self.xp += amount
+        self.xp += amount * 3 # currently buffed amount of xp earned for testing purposes
         if self.xp >= self.xp_to_next_level:
             self.level_up()
     
