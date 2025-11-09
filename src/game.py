@@ -2,6 +2,7 @@ import pygame
 import random
 import math
 
+from src.ui.game_over import GameOverScreen
 from src.entities.player import Player
 from src.entities.enemy import Enemy
 #from src.levels.level_manager import LevelManager
@@ -114,10 +115,28 @@ class Game:
                     
                     if self.player.hp <= 0:
                         self.player.hp = 0
-                        # Game over (simplified - just reset)
-                        self.player.hp = self.player.max_hp
-                        self.player.x = self.world_width // 2
-                        self.player.y = self.world_height // 2
+                        # Show game over screen
+                        game_over = GameOverScreen(score=self.player.level * 100)  # Calculate score however you want
+                        result = game_over.run()
+                        
+                        if result == 'retry':
+                            # Reset the game
+                            self.player.hp = self.player.max_hp
+                            self.player.x = self.world_width // 2
+                            self.player.y = self.world_height // 2
+                            self.player.level = 1
+                            self.player.xp = 0
+                            self.player.skill_points = 0
+                            self.enemies.clear()
+                            self.bullets.clear()
+                            self.spawn_enemies(5)
+                        elif result == 'menu':
+                            # Return to main menu
+                            self.running = False
+                            return 'menu'
+                        else:
+                            # User quit
+                            self.running = False
         
         # Update camera (follow player)
         self.camera_x = self.player.x - SCREEN_WIDTH // 2
@@ -221,7 +240,10 @@ class Game:
     def run(self):
         while self.running:
             self.handle_events()
-            self.update()
+            result = self.update()  # Capture the return value from update()
+            if result == 'menu':
+                return 'menu'  # Pass it back to main.py
             self.draw()
             self.clock.tick(FPS)
-        # Removed pygame.quit() from here - handled in main.py
+        
+        return None  # Return None if game exits normally
