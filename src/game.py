@@ -8,6 +8,7 @@ from src.entities.enemy import Enemy
 #from src.ui.hud import HUD
 from src.utils.constants import *
 from src.utils.enums import *
+from src.ui.stat_upgrade_ui import StatUpgradeUI
 
 class Game:
     def __init__(self, width, height, fps):
@@ -35,6 +36,7 @@ class Game:
         # UI
         self.font = pygame.font.Font(None, 24)
         self.small_font = pygame.font.Font(None, 18)
+        self.stat_ui = StatUpgradeUI() #Ui representing stat points upgrade
     
     def spawn_enemies(self, count):
         for _ in range(count):
@@ -60,6 +62,12 @@ class Game:
                     self.player.tank_type = TankType.BASIC
                 elif event.key == pygame.K_2:
                     self.player.tank_type = TankType.TWIN
+                elif event.key == pygame.K_k:
+                    self.stat_ui.toggle_visibility()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if self.stat_ui.handle_click(event.pos, self.player):
+                        pass
     
     def update(self):
         keys = pygame.key.get_pressed()
@@ -151,6 +159,7 @@ class Game:
         all_entities.extend(self.enemies)
         all_entities.append(self.player)
         
+        
         # Sort by z_index (lower values drawn first/behind)
         sorted_entities = sorted(all_entities, key=lambda e: e.z_index)
         
@@ -206,17 +215,21 @@ class Game:
         
         # Controls (bottom right)
         controls_x = SCREEN_WIDTH - 250
-        controls_y = SCREEN_HEIGHT - 100
+        controls_y = SCREEN_HEIGHT - 120
         controls = [
             "WASD/Arrows: Move",
             "Mouse: Aim",
             "Left Click/Space: Shoot",
-            "1/2: Change Tank"
+            "1/2: Change Tank",
+            "k: to toggle stats upgrade"
         ]
         
         for i, text in enumerate(controls):
             rendered = self.small_font.render(text, True, (100, 150, 200))
             self.screen.blit(rendered, (controls_x, controls_y + i * 18))
+
+        # Draw the stat upgrade
+        self.stat_ui.draw(self.screen, self.player)
     
     def run(self):
         while self.running:
