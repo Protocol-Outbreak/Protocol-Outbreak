@@ -34,6 +34,8 @@ class MenuApp:
             self.heading_font = pg.font.Font(font_path, 26)
             self.body_font = pg.font.Font(font_path, 17)
             self.small_font = pg.font.Font(italic_path, 15)
+            self.dev_font = pg.font.SysFont("arial", 20)
+            
         except:
             print("Custom font not found, using default")
             self.title_font = pg.font.SysFont("arial", 72, bold=True)
@@ -41,6 +43,7 @@ class MenuApp:
             self.heading_font = pg.font.SysFont("arial", 26, bold=True)
             self.body_font = pg.font.SysFont("arial", 17)
             self.small_font = pg.font.SysFont("arial", 15, italic=True)
+            self.dev_font = pg.font.SysFont("arial", 20)
         
         # Create grid background
         self.bg_image = self.create_grid_background()
@@ -51,7 +54,7 @@ class MenuApp:
         
         # Main button
         self.start_button = pg.Rect(0, 0, 500, 60)
-        self.start_button.center = (WIDTH // 2, HEIGHT - 80)  # Moved up slightly
+        self.start_button.center = (WIDTH // 2, HEIGHT - 100)  # Moved up slightly
         
         self.started = False
 
@@ -123,7 +126,7 @@ class MenuApp:
         self.draw_laser_scan()
         
         # Draw semi-transparent overlay panel - MADE TALLER
-        panel_rect = pg.Rect(50, 40, WIDTH - 100, HEIGHT - 60)  # Changed from HEIGHT - 80
+        panel_rect = pg.Rect(50, 40, WIDTH - 100, HEIGHT - 75)  # Changed from HEIGHT - 80
         panel_surface = pg.Surface((panel_rect.width, panel_rect.height), pg.SRCALPHA)
         panel_surface.fill((5, 10, 25, 220))
         
@@ -258,7 +261,21 @@ class MenuApp:
                 
         # Warning at bottom
         warning = self.small_font.render("Warning: As you descend deeper, the corruption intensifies. Enemies adapt. Stay alert.", True, (255, 255, 255))
-        self.screen.blit(warning, (WIDTH//2 - warning.get_width()//2, HEIGHT - 46))  # Moved up
+        self.screen.blit(warning, (WIDTH//2 - warning.get_width()//2, HEIGHT - 63))  # Moved up
+
+        # Developers section at very bottom
+        developers = ["Jason He", "Cristian Gutierrez Espinoza", "Joshua Paulino Ozuna", "Ian Khanna"]
+        dev_text = "Game created by: " + ", ".join(developers)
+
+        # Create semi-transparent bar at bottom
+        bar_height = 42
+        bar = pg.Surface((WIDTH, bar_height), pg.SRCALPHA)
+        bar.fill((0, 0, 0, 0))  # LAST NUMBER IS THE TRANSPARENCY
+        self.screen.blit(bar, (0, HEIGHT - bar_height))
+
+        dev_label = self.dev_font.render(dev_text, True, WHITE)
+        self.screen.blit(dev_label, (WIDTH//2 - dev_label.get_width()//2, HEIGHT - bar_height//2 - dev_label.get_height()//2 + 2))
+
 
 if __name__ == "__main__":
     app = MenuApp()
