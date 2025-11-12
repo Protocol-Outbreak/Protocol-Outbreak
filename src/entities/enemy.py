@@ -19,6 +19,11 @@ class Enemy:
         self.xp_value = 10
         self.z_index = 50  # Layer: Enemies drawn above bullets, below player
         
+        # Aggro system
+        self.is_aggroed = False
+        self.aggro_range = 300  # Distance at which enemy notices player
+        self.deaggro_range = 500  # Distance at which enemy loses interest
+        
         # Set stats based on type
         if enemy_type == EnemyType.SQUARE_TURRET:
             self.health = 80
@@ -26,26 +31,45 @@ class Enemy:
             self.speed = 0.5
             self.shoot_delay = 90
             self.xp_value = 15
+            self.aggro_range = 350  # Turrets have longer sight
         elif enemy_type == EnemyType.TRIANGLE_BLADE:
             self.health = 30
             self.max_health = 30
             self.speed = 3
             self.shoot_delay = 0  # Melee only
             self.xp_value = 25
+            self.aggro_range = 250  # Blades have shorter sight
         elif enemy_type == EnemyType.PENTAGON_GUNNER:
             self.health = 100
             self.max_health = 100
             self.speed = 1.5
             self.shoot_delay = 45
             self.xp_value = 50
+            self.aggro_range = 400  # Gunners have good sight
+    
+    def take_damage(self, damage):
+        """Handle taking damage and trigger aggro"""
+        self.health -= damage
+        self.is_aggroed = True  # Getting hit always aggros
     
     def update(self, player_x, player_y, bullets):
-        # AI behavior
+        # Calculate distance to player
         dx = player_x - self.x
         dy = player_y - self.y
         distance = math.sqrt(dx**2 + dy**2)
         
-        if distance > 0:
+        # Check aggro status
+        if not self.is_aggroed:
+            # Check if player enters aggro range
+            if distance <= self.aggro_range:
+                self.is_aggroed = True
+        else:
+            # Check if player is too far (deaggro)
+            if distance > self.deaggro_range:
+                self.is_aggroed = False
+        
+        # Only act if aggroed
+        if self.is_aggroed and distance > 0:
             self.angle = math.atan2(dy, dx)
             
             # Movement based on type
@@ -66,12 +90,15 @@ class Enemy:
                 elif distance > 400:
                     self.x += (dx / distance) * self.speed
                     self.y += (dy / distance) * self.speed
-        
-        # Shooting
-        self.shoot_cooldown -= 1
-        if self.shoot_cooldown <= 0 and self.shoot_delay > 0 and distance < 500:
-            self.shoot(bullets)
-            self.shoot_cooldown = self.shoot_delay
+            
+            # Shooting
+            self.shoot_cooldown -= 1
+            if self.shoot_cooldown <= 0 and self.shoot_delay > 0 and distance < 500:
+                self.shoot(bullets)
+                self.shoot_cooldown = self.shoot_delay
+        else:
+            # Idle behavior - slowly rotate or do nothing
+            self.angle += 0.02  # Slow idle rotation
     
     def shoot(self, bullets):
         if self.type == EnemyType.SQUARE_TURRET:
@@ -86,11 +113,13 @@ class Enemy:
         screen_x = int(self.x - camera_x)
         screen_y = int(self.y - camera_y)
         
-        # Draw based on type
+        # Choose color based on aggro state
         if self.type == EnemyType.SQUARE_TURRET:
-            pygame.draw.rect(screen, CLEAN_BLUE, 
+            color = CORRUPTION_PINK if self.is_aggroed else CLEAN_BLUE
+            pygame.draw.rect(screen, color, 
                            (screen_x - self.size//2, screen_y - self.size//2, self.size, self.size), 2)
         elif self.type == EnemyType.TRIANGLE_BLADE:
+            color = CORRUPTION_ORANGE if self.is_aggroed else CORRUPTION_PINK
             points = [
                 (screen_x + math.cos(self.angle) * self.size, 
                  screen_y + math.sin(self.angle) * self.size),
@@ -99,14 +128,19 @@ class Enemy:
                 (screen_x + math.cos(self.angle - 2.4) * self.size, 
                  screen_y + math.sin(self.angle - 2.4) * self.size)
             ]
-            pygame.draw.polygon(screen, CORRUPTION_PINK, points, 2)
+            pygame.draw.polygon(screen, color, points, 2)
         elif self.type == EnemyType.PENTAGON_GUNNER:
+            color = (255, 100, 100) if self.is_aggroed else CORRUPTION_ORANGE
             points = []
             for i in range(5):
                 angle = self.angle + (i * math.pi * 2 / 5)
                 points.append((screen_x + math.cos(angle) * self.size,
                              screen_y + math.sin(angle) * self.size))
-            pygame.draw.polygon(screen, CORRUPTION_ORANGE, points, 2)
+            pygame.draw.polygon(screen, color, points, 2)
+        
+        # Optional: Draw aggro range indicator (for debugging)
+        if not self.is_aggroed:
+            pygame.draw.circle(screen, (100, 100, 100), (screen_x, screen_y), self.aggro_range, 1)
         
         # Health bar
         bar_width = 40
