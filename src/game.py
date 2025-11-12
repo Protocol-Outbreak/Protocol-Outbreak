@@ -313,6 +313,24 @@ class Game:
                         return self._handle_player_death()
         return None
     
+    def handle_bullet_wall_collisions(self):
+        """Check if bullets hit walls and remove them"""
+        for bullet in self.bullets[:]:
+            # Create bullet rect for collision
+            bullet_rect = pygame.Rect(
+                bullet.x - bullet.radius,
+                bullet.y - bullet.radius,
+                bullet.radius * 2,
+                bullet.radius * 2
+            )
+            
+            # Check collision with walls
+            for wall in self.walls:
+                if wall.collides_with(bullet_rect):
+                    if bullet in self.bullets:
+                        self.bullets.remove(bullet)
+                    break
+    
     def _handle_player_death(self):
         """Handle player death and game over screen"""
         print('trying to attmept')
@@ -365,6 +383,7 @@ class Game:
             bullet.update()
             if bullet.is_off_screen(self.camera_x, self.camera_y) or bullet.health <= 0:
                 self.bullets.remove(bullet)
+        self.handle_bullet_wall_collisions()
                 
         # Save old enemy positions
         enemy_old_positions = [(enemy.x, enemy.y) for enemy in self.enemies]
