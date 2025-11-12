@@ -55,7 +55,7 @@ class Game:
 
         # Spawn initial enemies
         #self.spawn_enemies(5)
-        self.spawn_enemies()
+        
 
 
     def load_level(self, level_number):
@@ -94,6 +94,9 @@ class Game:
             # Clear existing entities
             self.enemies.clear()
             self.bullets.clear()
+
+            # Spawn enemies
+            self.spawn_enemies()
             
             print(f"✅ Level loaded successfully!")
             print(f"   Name: {self.level_name}")
@@ -242,7 +245,9 @@ class Game:
             if not hasattr(enemy, 'last_contact_damage') or current_time - enemy.last_contact_damage > 1000:
                 self.player.hp -= 5
                 self.player.last_damage_time = current_time
-                enemy.last_contact_damage = current_time
+                enemy.last_contact_damage = current_time           
+                if self.player.hp <= 0:
+                    return self._handle_player_death()
     
     def _check_enemy_enemy_collisions(self):
         """Prevent enemies from stacking on each other"""
@@ -310,19 +315,22 @@ class Game:
     
     def _handle_player_death(self):
         """Handle player death and game over screen"""
+        print('trying to attmept')
         self.player.hp = 0
         game_over = GameOverScreen(score=self.player.level * 100)
         result = game_over.run()
         
         if result == 'retry':
             self.player.hp = self.player.max_hp
-            self.player.x = self.world_width // 2
-            self.player.y = self.world_height // 2
+            x,y = self.player_spawn_point
+            self.player.x = x
+            self.player.y = y
             self.player.level = 1
             self.player.xp = 0
             self.player.skill_points = 0
             self.enemies.clear()
             self.bullets.clear()
+            self.spawn_enemies()
         elif result == 'menu':
             self.running = False
             return 'menu'
