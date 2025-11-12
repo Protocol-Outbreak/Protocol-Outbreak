@@ -198,7 +198,7 @@ class MenuApp:
         y_offset += 35
         
         controls = [
-            ("WASD", "Movement"),
+            ("WASD/Arrow Keys", "Movement"),
             ("Mouse/Space", "Aim & Fire")
         ]
         
@@ -279,4 +279,5 @@ class MenuApp:
 
 if __name__ == "__main__":
     app = MenuApp()
+
     app.run()
