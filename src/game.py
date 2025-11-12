@@ -139,19 +139,19 @@ class Game:
                     self.running = False
                 elif event.key == pygame.K_1:
                     self.player.tank_type = TankType.BASIC
-                elif event.key == pygame.K_2:
+                elif event.key == pygame.K_2 and self.player.level >= 2:
                     self.player.tank_type = TankType.TWIN
-                elif event.key == pygame.K_3:
+                elif event.key == pygame.K_3 and self.player.level >= 3:
                     self.player.tank_type = TankType.TRIPLET
-                elif event.key == pygame.K_4:
+                elif event.key == pygame.K_4 and self.player.level >= 4:
                     self.player.tank_type = TankType.QUAD
-                elif event.key == pygame.K_5:
+                elif event.key == pygame.K_5 and self.player.level >= 5:
                     self.player.tank_type = TankType.OCTO
-                elif event.key == pygame.K_6:
+                elif event.key == pygame.K_6 and self.player.level >= 6:
                     self.player.tank_type = TankType.PENTA_SHOT
-                elif event.key == pygame.K_7:
+                elif event.key == pygame.K_7 and self.player.level >= 7:
                     self.player.tank_type = TankType.SNIPER
-                elif event.key == pygame.K_8:
+                elif event.key == pygame.K_8 and self.player.level >= 8:
                     self.player.tank_type = TankType.MACHINE_GUN
 
 
@@ -325,9 +325,9 @@ class Game:
             x,y = self.player_spawn_point
             self.player.x = x
             self.player.y = y
-            self.player.level = 1
-            self.player.xp = 0
-            self.player.skill_points = 0
+            #self.player.level = 1
+            #self.player.xp = 0
+            #self.player.skill_points = 0
             self.enemies.clear()
             self.bullets.clear()
             self.spawn_enemies()
