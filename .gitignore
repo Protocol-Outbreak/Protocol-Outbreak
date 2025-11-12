@@ -29,4 +29,5 @@ wheels/
 # Game specific
 *.log
 saves/
-screenshots/
+screenshots/__pycache__/
+*.pyc
