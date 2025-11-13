@@ -153,19 +153,19 @@ class Game:
                     self.running = False
                 elif event.key == pygame.K_1:
                     self.player.tank_type = TankType.BASIC
-                elif event.key == pygame.K_2 and self.player.level >= 2:
+                elif event.key == pygame.K_2 and self.player.level >= 3:
                     self.player.tank_type = TankType.TWIN
-                elif event.key == pygame.K_3 and self.player.level >= 3:
+                elif event.key == pygame.K_3 and self.player.level >= 6:
                     self.player.tank_type = TankType.TRIPLET
-                elif event.key == pygame.K_4 and self.player.level >= 4:
+                elif event.key == pygame.K_4 and self.player.level >= 9:
                     self.player.tank_type = TankType.QUAD
-                elif event.key == pygame.K_5 and self.player.level >= 5:
+                elif event.key == pygame.K_5 and self.player.level >= 12:
                     self.player.tank_type = TankType.OCTO
-                elif event.key == pygame.K_6 and self.player.level >= 6:
+                elif event.key == pygame.K_6 and self.player.level >= 15:
                     self.player.tank_type = TankType.PENTA_SHOT
-                elif event.key == pygame.K_7 and self.player.level >= 7:
+                elif event.key == pygame.K_7 and self.player.level >= 18:
                     self.player.tank_type = TankType.SNIPER
-                elif event.key == pygame.K_8 and self.player.level >= 8:
+                elif event.key == pygame.K_8 and self.player.level >= 21:
                     self.player.tank_type = TankType.MACHINE_GUN
                 elif event.key == pygame.K_c:  # Press 'C' to clear all enemies for testing purposes
                     self.enemies.clear() 
