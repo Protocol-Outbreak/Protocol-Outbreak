@@ -13,6 +13,9 @@ from src.ui.stat_upgrade_ui import StatUpgradeUI
 from src.entities.wall import Wall
 from src.systems.collisions import CollisionSystem
 from src.levels.map_generator import MapGenerator
+from src.ui.level_transition import LevelTransition
+from src.ui.level_progress_ui import LevelProgressUI
+
 
 class Game:
     def __init__(self, width, height, fps):
@@ -49,9 +52,16 @@ class Game:
         self.font = pygame.font.Font(None, 24)
         self.small_font = pygame.font.Font(None, 18)
         self.stat_ui = StatUpgradeUI() #Ui representing stat points upgrade
+        self.level_progress_ui = LevelProgressUI()
+
+        # Level progress
+        self.initial_enemy_count = 0
+        self.level_complete = False
+        self.next_level_button_rect = None
 
         # Load first level
         self.load_level(0)
+
 
         # Spawn initial enemies
         #self.spawn_enemies(5)
@@ -97,6 +107,10 @@ class Game:
 
             # Spawn enemies
             self.spawn_enemies()
+
+            # Track initial enemy count for progress bar
+            self.initial_enemy_count = len(self.enemies)
+            self.level_complete = False
             
             print(f"✅ Level loaded successfully!")
             print(f"   Name: {self.level_name}")
@@ -139,19 +153,19 @@ class Game:
                     self.running = False
                 elif event.key == pygame.K_1:
                     self.player.tank_type = TankType.BASIC
-                elif event.key == pygame.K_2:
+                elif event.key == pygame.K_2 and self.player.level >= 2:
                     self.player.tank_type = TankType.TWIN
-                elif event.key == pygame.K_3:
+                elif event.key == pygame.K_3 and self.player.level >= 3:
                     self.player.tank_type = TankType.TRIPLET
-                elif event.key == pygame.K_4:
+                elif event.key == pygame.K_4 and self.player.level >= 4:
                     self.player.tank_type = TankType.QUAD
-                elif event.key == pygame.K_5:
+                elif event.key == pygame.K_5 and self.player.level >= 5:
                     self.player.tank_type = TankType.OCTO
-                elif event.key == pygame.K_6:
+                elif event.key == pygame.K_6 and self.player.level >= 6:
                     self.player.tank_type = TankType.PENTA_SHOT
-                elif event.key == pygame.K_7:
+                elif event.key == pygame.K_7 and self.player.level >= 7:
                     self.player.tank_type = TankType.SNIPER
-                elif event.key == pygame.K_8:
+                elif event.key == pygame.K_8 and self.player.level >= 8:
                     self.player.tank_type = TankType.MACHINE_GUN
 
 
@@ -161,6 +175,23 @@ class Game:
                 if event.button == 1:
                     if self.stat_ui.handle_click(event.pos, self.player):
                         pass
+                    elif self.level_complete and self.level_progress_ui.check_button_click(event.pos):
+                            self.proceed_to_next_level()
+
+# Level Progression
+
+    def proceed_to_next_level(self):
+        """Handle transition to next level"""
+        next_level = self.current_level_number + 1
+        
+        # Show transition screen
+        transition = LevelTransition(self.current_level_number, next_level)
+        if transition.show(self.screen):
+            # Load next level
+            self.load_level(next_level)
+        else:
+            # User closed window during transition
+            self.running = False
     
 # ========== COLLISION DETECTION METHODS ==========
     
@@ -313,11 +344,29 @@ class Game:
                         return self._handle_player_death()
         return None
     
+    def handle_bullet_wall_collisions(self):
+        """Check if bullets hit walls and remove them"""
+        for bullet in self.bullets[:]:
+            # Create bullet rect for collision
+            bullet_rect = pygame.Rect(
+                bullet.x - bullet.radius,
+                bullet.y - bullet.radius,
+                bullet.radius * 2,
+                bullet.radius * 2
+            )
+            
+            # Check collision with walls
+            for wall in self.walls:
+                if wall.collides_with(bullet_rect):
+                    if bullet in self.bullets:
+                        self.bullets.remove(bullet)
+                    break
+    
     def _handle_player_death(self):
         """Handle player death and game over screen"""
-        print('trying to attmept')
+        print('trying to attempt')
         self.player.hp = 0
-        game_over = GameOverScreen(score=self.player.level * 100)
+        game_over = GameOverScreen(score=(self.player.level - 1) * 100)
         result = game_over.run()
         
         if result == 'retry':
@@ -325,9 +374,10 @@ class Game:
             x,y = self.player_spawn_point
             self.player.x = x
             self.player.y = y
-            self.player.level = 1
-            self.player.xp = 0
-            self.player.skill_points = 0
+            # These comments allow for the level, xp, and skill points to be saved after every point
+            #self.player.level = 1
+            #self.player.xp = 0
+            #self.player.skill_points = 0
             self.enemies.clear()
             self.bullets.clear()
             self.spawn_enemies()
@@ -365,6 +415,7 @@ class Game:
             bullet.update()
             if bullet.is_off_screen(self.camera_x, self.camera_y) or bullet.health <= 0:
                 self.bullets.remove(bullet)
+        self.handle_bullet_wall_collisions()
                 
         # Save old enemy positions
         enemy_old_positions = [(enemy.x, enemy.y) for enemy in self.enemies]
@@ -378,6 +429,10 @@ class Game:
         result = self.handle_bullet_collisions()
         if result == 'menu':
             return 'menu'
+
+        # Check if level is complete
+        if len(self.enemies) == 0 and self.initial_enemy_count > 0 and not self.level_complete:
+            self.level_complete = True
         
         # Update camera
         self.camera_x = self.player.x - SCREEN_WIDTH // 2
@@ -429,6 +484,19 @@ class Game:
         pygame.display.flip()
     
     def draw_ui(self):
+        # Enemy progress bar
+        self.level_progress_ui.draw_enemy_progress_bar(
+            self.screen, 
+            len(self.enemies), 
+            self.initial_enemy_count, 
+            self.level_complete
+        )
+
+        # Level Complete Button
+        if self.level_complete:
+            self.level_progress_ui.draw_next_level_button(self.screen)
+        
+
         # Health bar
         bar_x = 20
         bar_y = SCREEN_HEIGHT - 80
@@ -486,6 +554,15 @@ class Game:
 
         # Draw the stat upgrade
         self.stat_ui.draw(self.screen, self.player)
+
+    def proceed_to_next_level(self):
+        """Handle transition to next level"""
+        next_level = self.current_level_number + 1
+        transition = LevelTransition(self.current_level_number, next_level)
+        if transition.show(self.screen):
+            self.load_level(next_level)
+        else:
+            self.running = False
     
     def run(self):
         while self.running:
