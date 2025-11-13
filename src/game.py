@@ -167,6 +167,8 @@ class Game:
                     self.player.tank_type = TankType.SNIPER
                 elif event.key == pygame.K_8 and self.player.level >= 8:
                     self.player.tank_type = TankType.MACHINE_GUN
+                elif event.key == pygame.K_c:  # Press 'C' to clear all enemies for testing purposes
+                    self.enemies.clear() 
 
 
                 elif event.key == pygame.K_k:

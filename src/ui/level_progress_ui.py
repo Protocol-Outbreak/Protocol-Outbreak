@@ -6,7 +6,7 @@ class LevelProgressUI:
     
     def __init__(self):
         self.font = pygame.font.Font(None, 24)
-        self.button_font = pygame.font.Font(None, 36)
+        self.button_font = pygame.font.Font(None, 32)
         self.small_font = pygame.font.Font(None, 18)
         self.next_level_button_rect = None
     
