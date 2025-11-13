@@ -3,6 +3,7 @@ import sys
 import pygame as pg
 import os
 import random
+import math
 
 WIDTH, HEIGHT = 1280, 720
 FPS = 60
@@ -22,75 +23,105 @@ class NanoDrone:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.size = random.randint(8, 12)
-        self.speed_x = random.uniform(-100, 100)
-        self.speed_y = random.uniform(-50, 50)
+        self.base_size = random.randint(6, 8)
+        self.speed_x = random.uniform(-80, 80)
+        self.speed_y = random.uniform(-60, 60)
         self.color = random.choice([CYAN, BRIGHT_CYAN, PURPLE])
+        
+        # Pulsing animation for center light
+        self.pulse_timer = random.uniform(0, 3.14)
+        self.pulse_speed = random.uniform(3, 5)
         
     def update(self, dt):
         self.x += self.speed_x * dt
         self.y += self.speed_y * dt
         
         # Wrap around screen
-        if self.x < -10:
-            self.x = WIDTH + 10
-        elif self.x > WIDTH + 10:
-            self.x = -10
-        if self.y < -10:
-            self.y = HEIGHT + 10
-        elif self.y > HEIGHT + 10:
-            self.y = -10
+        if self.x < -20:
+            self.x = WIDTH + 20
+        elif self.x > WIDTH + 20:
+            self.x = -20
+        if self.y < -20:
+            self.y = HEIGHT + 20
+        elif self.y > HEIGHT + 20:
+            self.y = -20
+        
+        # Update pulse animation
+        self.pulse_timer += self.pulse_speed * dt
     
     def draw(self, screen):
         x, y = int(self.x), int(self.y)
+        size = self.base_size
         
-        # Draw faint outer diamonds (4 corners)
-        faint_color = (*self.color[:3], 80)  # Semi-transparent version
-        outer_diamond_size = self.size // 2
-        offset = self.size + outer_diamond_size + 2  # Fixed offset calculation
+        # Draw propeller glow effects (4 corners)
+        glow_offset = size + 3
+        glow_size = 4
+        glow_color = (*self.color, 100)  # Semi-transparent
         
-        # Top diamond
-        self.draw_diamond(screen, (x, y - offset), outer_diamond_size, faint_color)
-        # Bottom diamond
-        self.draw_diamond(screen, (x, y + offset), outer_diamond_size, faint_color)
-        # Left diamond
-        self.draw_diamond(screen, (x - offset, y), outer_diamond_size, faint_color)
-        # Right diamond
-        self.draw_diamond(screen, (x + offset, y), outer_diamond_size, faint_color)
+        # Create glow surface for transparency
+        glow_surf = pg.Surface((glow_size * 3, glow_size * 3), pg.SRCALPHA)
         
-        # Draw glow around center
-        glow_surf = pg.Surface((self.size * 4, self.size * 4), pg.SRCALPHA)
-        pg.draw.circle(glow_surf, (*self.color, 30), (self.size * 2, self.size * 2), self.size * 2)
-        screen.blit(glow_surf, (x - self.size * 2, y - self.size * 2))
+        # Top-left propeller glow
+        self._draw_glow(screen, x - glow_offset, y - glow_offset, glow_size, glow_color)
+        # Top-right propeller glow
+        self._draw_glow(screen, x + glow_offset, y - glow_offset, glow_size, glow_color)
+        # Bottom-left propeller glow
+        self._draw_glow(screen, x - glow_offset, y + glow_offset, glow_size, glow_color)
+        # Bottom-right propeller glow
+        self._draw_glow(screen, x + glow_offset, y + glow_offset, glow_size, glow_color)
         
-        # Draw center bright diamond (star) - draw last so it's on top
-        self.draw_diamond_solid(screen, (x, y), self.size, self.color)
-    
-    def draw_diamond(self, surface, center, size, color):
-        """Draw a faint diamond shape with transparency"""
-        cx, cy = center
-        points = [
-            (cx, cy - size),      # Top
-            (cx + size, cy),      # Right
-            (cx, cy + size),      # Bottom
-            (cx - size, cy)       # Left
+        # Draw arms/connectors (cross shape)
+        arm_length = size + 4
+        arm_color = (*self.color, 80)
+        
+        # Horizontal arm
+        arm_surf = pg.Surface((arm_length * 2, 2), pg.SRCALPHA)
+        arm_surf.fill(arm_color)
+        screen.blit(arm_surf, (x - arm_length, y - 1))
+        
+        # Vertical arm
+        arm_surf_v = pg.Surface((2, arm_length * 2), pg.SRCALPHA)
+        arm_surf_v.fill(arm_color)
+        screen.blit(arm_surf_v, (x - 1, y - arm_length))
+        
+        # Draw drone body (rotated square/diamond)
+        body_points = [
+            (x, y - size),      # Top
+            (x + size, y),      # Right
+            (x, y + size),      # Bottom
+            (x - size, y)       # Left
         ]
-        # Create a temporary surface for transparency
-        temp_surf = pg.Surface((size * 3, size * 3), pg.SRCALPHA)
-        adjusted_points = [(p[0] - cx + size * 1.5, p[1] - cy + size * 1.5) for p in points]
-        pg.draw.polygon(temp_surf, color, adjusted_points)
-        surface.blit(temp_surf, (cx - size * 1.5, cy - size * 1.5))
+        
+        # Body with border
+        pg.draw.polygon(screen, self.color, body_points)
+        pg.draw.polygon(screen, self.color, body_points, 1)  # Border
+        
+        # Main glow around body
+        main_glow_surf = pg.Surface((size * 6, size * 6), pg.SRCALPHA)
+        pg.draw.circle(main_glow_surf, (*self.color, 30), (size * 3, size * 3), size * 3)
+        screen.blit(main_glow_surf, (x - size * 3, y - size * 3))
+        
+        # Center pulsing light (accent color)
+        pulse_intensity = (math.sin(self.pulse_timer) + 1) / 2  # 0 to 1
+        center_size = int(2 + pulse_intensity * 2)
+        accent_color = (255, 150, 255)  # Purple/pink accent
+        
+        # Pulsing glow
+        pulse_glow_surf = pg.Surface((center_size * 6, center_size * 6), pg.SRCALPHA)
+        glow_alpha = int(100 + pulse_intensity * 100)
+        pg.draw.circle(pulse_glow_surf, (*accent_color, glow_alpha), 
+                      (center_size * 3, center_size * 3), center_size * 3)
+        screen.blit(pulse_glow_surf, (x - center_size * 3, y - center_size * 3))
+        
+        # Center dot
+        pg.draw.circle(screen, accent_color, (x, y), center_size)
     
-    def draw_diamond_solid(self, surface, center, size, color):
-        """Draw a solid bright diamond shape"""
-        cx, cy = center
-        points = [
-            (cx, cy - size),      # Top
-            (cx + size, cy),      # Right
-            (cx, cy + size),      # Bottom
-            (cx - size, cy)       # Left
-        ]
-        pg.draw.polygon(surface, color, points)
+    def _draw_glow(self, screen, x, y, size, color):
+        """Helper to draw a glowing circle"""
+        glow_surf = pg.Surface((size * 4, size * 4), pg.SRCALPHA)
+        pg.draw.circle(glow_surf, color, (size * 2, size * 2), size * 2)
+        pg.draw.circle(glow_surf, color, (size * 2, size * 2), size, 0)
+        screen.blit(glow_surf, (x - size * 2, y - size * 2))
 
 class MenuApp:
     def __init__(self):
