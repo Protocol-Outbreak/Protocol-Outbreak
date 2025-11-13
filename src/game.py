@@ -15,6 +15,7 @@ from src.systems.collisions import CollisionSystem
 from src.levels.map_generator import MapGenerator
 from src.ui.level_transition import LevelTransition
 from src.ui.level_progress_ui import LevelProgressUI
+from src.ui.minimap import Minimap
 
 
 class Game:
@@ -53,6 +54,7 @@ class Game:
         self.small_font = pygame.font.Font(None, 18)
         self.stat_ui = StatUpgradeUI() #Ui representing stat points upgrade
         self.level_progress_ui = LevelProgressUI()
+        self.minimap = Minimap(self.world_width, self.world_height)
 
         # Level progress
         self.initial_enemy_count = 0
@@ -112,6 +114,10 @@ class Game:
             self.initial_enemy_count = len(self.enemies)
             self.level_complete = False
             
+            # Update minimap world size
+            self.minimap.world_width = self.world_width
+            self.minimap.world_height = self.world_height
+            
             print(f"✅ Level loaded successfully!")
             print(f"   Name: {self.level_name}")
             print(f"   Walls: {len(self.walls)}")
@@ -121,7 +127,6 @@ class Game:
         else:
             print(f"❌ Failed to load level {level_number}, using empty map")
             self.walls = []
-
     
     def spawn_enemies(self):
         spawn_points = self.enemy_spawn_points
@@ -151,6 +156,8 @@ class Game:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
+                elif event.key == pygame.K_m:  # ADD THIS
+                    self.minimap.toggle()
                 elif event.key == pygame.K_1:
                     self.player.tank_type = TankType.BASIC
                 elif event.key == pygame.K_2 and self.player.level >= 2:
@@ -556,6 +563,9 @@ class Game:
 
         # Draw the stat upgrade
         self.stat_ui.draw(self.screen, self.player)
+
+        # Draw minimap (add at the end of draw_ui)
+        self.minimap.draw(self.screen, self.player, self.enemies, self.walls)
 
     def proceed_to_next_level(self):
         """Handle transition to next level"""

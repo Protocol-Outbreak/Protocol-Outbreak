@@ -351,7 +351,7 @@ class MenuApp:
         y_offset += 35
         
         enemy_types = [
-            ("Fast Units", " - High speed, low health", RED),
+            ("Turret Units", " - Stationary, rapid fire", RED),
             ("Basic Units", " - Balanced threat", (255, 150, 50)),
             ("Tank Units", " - Slow but heavily armored", (100, 150, 255))
         ]
