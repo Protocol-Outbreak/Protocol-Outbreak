@@ -98,7 +98,7 @@ class Player:
         ShootingSystem.shoot(self, bullets)
     
     def gain_xp(self, amount):
-        self.xp += amount * 3 # currently buffed amount of xp earned for testing purposes
+        self.xp += amount # currently buffed amount of xp earned for testing purposes
         if self.xp >= self.xp_to_next_level:
             self.level_up()
     
@@ -109,22 +109,22 @@ class Player:
         
         # Award skill point (simplified - should follow diep.io rules)
         self.skill_points += 1
-        if self.level == 2:
-            self.tank_type = TankType.TWIN
+        if self.level == 1:
+            self.tank_type = TankType.BASIC
             #self.skill_points += 1
         elif self.level == 3:
             self.tank_type = TankType.TWIN
-        elif self.level == 4:
-            self.tank_type = TankType.TRIPLET
-        elif self.level == 5:
-            self.tank_type = TankType.QUAD
         elif self.level == 6:
-            self.tank_type = TankType.OCTO
-        elif self.level == 7:
-            self.tank_type = TankType.PENTA_SHOT
-        elif self.level == 8:
-            self.tank_type = TankType.SNIPER
+            self.tank_type = TankType.TRIPLET
         elif self.level == 9:
+            self.tank_type = TankType.QUAD
+        elif self.level == 12:
+            self.tank_type = TankType.OCTO
+        elif self.level == 15:
+            self.tank_type = TankType.PENTA_SHOT
+        elif self.level == 18:
+            self.tank_type = TankType.SNIPER
+        elif self.level == 21:
             self.tank_type = TankType.MACHINE_GUN
         
             #self.skill_points += 1

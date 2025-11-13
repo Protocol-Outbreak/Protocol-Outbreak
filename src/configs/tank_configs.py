@@ -79,8 +79,8 @@ TANK_CONFIGS = {
         "cannons": [
             {"angle_offset": 0, "position_offset": (0, 0)}
         ],
-        "damage_multiplier": 1.5,
-        "reload_speed": 0.5,  # Slower reload
+        "damage_multiplier": 2.25,
+        "reload_speed": 0.35,  # Slower reload
         "bullet_speed_bonus": 2.0,
         "description": "High damage, slow fire"
     },
