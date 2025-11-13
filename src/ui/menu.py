@@ -2,6 +2,7 @@
 import sys
 import pygame as pg
 import os
+import random
 
 WIDTH, HEIGHT = 1280, 720
 FPS = 60
@@ -16,6 +17,80 @@ PURPLE = (180, 100, 255)
 RED = (255, 50, 100)
 WHITE = (255, 255, 255)
 GRAY = (150, 160, 170)
+
+class NanoDrone:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.size = random.randint(8, 12)
+        self.speed_x = random.uniform(-100, 100)
+        self.speed_y = random.uniform(-50, 50)
+        self.color = random.choice([CYAN, BRIGHT_CYAN, PURPLE])
+        
+    def update(self, dt):
+        self.x += self.speed_x * dt
+        self.y += self.speed_y * dt
+        
+        # Wrap around screen
+        if self.x < -10:
+            self.x = WIDTH + 10
+        elif self.x > WIDTH + 10:
+            self.x = -10
+        if self.y < -10:
+            self.y = HEIGHT + 10
+        elif self.y > HEIGHT + 10:
+            self.y = -10
+    
+    def draw(self, screen):
+        x, y = int(self.x), int(self.y)
+        
+        # Draw faint outer diamonds (4 corners)
+        faint_color = (*self.color[:3], 80)  # Semi-transparent version
+        outer_diamond_size = self.size // 2
+        offset = self.size + outer_diamond_size + 2  # Fixed offset calculation
+        
+        # Top diamond
+        self.draw_diamond(screen, (x, y - offset), outer_diamond_size, faint_color)
+        # Bottom diamond
+        self.draw_diamond(screen, (x, y + offset), outer_diamond_size, faint_color)
+        # Left diamond
+        self.draw_diamond(screen, (x - offset, y), outer_diamond_size, faint_color)
+        # Right diamond
+        self.draw_diamond(screen, (x + offset, y), outer_diamond_size, faint_color)
+        
+        # Draw glow around center
+        glow_surf = pg.Surface((self.size * 4, self.size * 4), pg.SRCALPHA)
+        pg.draw.circle(glow_surf, (*self.color, 30), (self.size * 2, self.size * 2), self.size * 2)
+        screen.blit(glow_surf, (x - self.size * 2, y - self.size * 2))
+        
+        # Draw center bright diamond (star) - draw last so it's on top
+        self.draw_diamond_solid(screen, (x, y), self.size, self.color)
+    
+    def draw_diamond(self, surface, center, size, color):
+        """Draw a faint diamond shape with transparency"""
+        cx, cy = center
+        points = [
+            (cx, cy - size),      # Top
+            (cx + size, cy),      # Right
+            (cx, cy + size),      # Bottom
+            (cx - size, cy)       # Left
+        ]
+        # Create a temporary surface for transparency
+        temp_surf = pg.Surface((size * 3, size * 3), pg.SRCALPHA)
+        adjusted_points = [(p[0] - cx + size * 1.5, p[1] - cy + size * 1.5) for p in points]
+        pg.draw.polygon(temp_surf, color, adjusted_points)
+        surface.blit(temp_surf, (cx - size * 1.5, cy - size * 1.5))
+    
+    def draw_diamond_solid(self, surface, center, size, color):
+        """Draw a solid bright diamond shape"""
+        cx, cy = center
+        points = [
+            (cx, cy - size),      # Top
+            (cx + size, cy),      # Right
+            (cx, cy + size),      # Bottom
+            (cx - size, cy)       # Left
+        ]
+        pg.draw.polygon(surface, color, points)
 
 class MenuApp:
     def __init__(self):
@@ -55,6 +130,14 @@ class MenuApp:
         # Main button
         self.start_button = pg.Rect(0, 0, 500, 60)
         self.start_button.center = (WIDTH // 2, HEIGHT - 100)  # Moved up slightly
+
+        # Nano drones
+        import random
+        self.drones = []
+        for _ in range(15):  # Spawn 15 drones
+            x = random.randint(0, WIDTH)
+            y = random.randint(0, HEIGHT)
+            self.drones.append(NanoDrone(x, y))
         
         self.started = False
 
@@ -80,6 +163,10 @@ class MenuApp:
             self.laser_y += self.laser_speed * dt
             if self.laser_y > HEIGHT:
                 self.laser_y = 0
+            
+            # ADD THIS - Update drones
+            for drone in self.drones:
+                drone.update(dt)
             
             for e in pg.event.get():
                 if e.type == pg.QUIT:
@@ -121,6 +208,15 @@ class MenuApp:
     def draw_menu(self):
         # Draw background
         self.screen.blit(self.bg_image, (0, 0))
+        
+        # Draw drones FIRST (behind everything)
+        for drone in self.drones:
+            drone.draw(self.screen)
+        
+        # Draw laser scan
+        self.draw_laser_scan()
+        
+        # ... rest of your draw code
         
         # Draw laser scan effect (behind everything)
         self.draw_laser_scan()

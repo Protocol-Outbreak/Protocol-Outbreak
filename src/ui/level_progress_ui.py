@@ -36,7 +36,7 @@ class LevelProgressUI:
         pygame.draw.rect(screen, WHITE, (bar_x, bar_y, bar_width, bar_height), 2)
         
         # Text
-        text = f"Enemies: {enemies_killed}/{initial_enemy_count}"
+        text = f"Enemies Eliminated: {enemies_killed}/{initial_enemy_count}"
         if level_complete:
             text = "ALL ENEMIES ELIMINATED!"
         
