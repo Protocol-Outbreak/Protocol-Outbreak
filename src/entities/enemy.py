@@ -132,6 +132,8 @@ class Enemy:
                 elif distance > 400:
                     self.x += (dx / distance) * self.speed
                     self.y += (dy / distance) * self.speed
+
+            '''
             elif self.type == EnemyType.SNIPER:
                 # Completely stationary - just aim
                 pass
@@ -144,11 +146,12 @@ class Enemy:
                     self.x += (dx / distance) * self.speed
                     self.y += (dy / distance) * self.speed
             
+            '''
             # Shooting
             self.shoot_cooldown -= 1
             if self.shoot_cooldown <= 0 and self.shoot_delay > 0:
                 # Check range for shooting
-                shoot_range = 800 if self.type == EnemyType.SNIPER else 500
+                shoot_range = 800 #if self.type == EnemyType.SNIPER else 500
                 if distance < shoot_range:
                     self.shoot(bullets)
                     self.shoot_cooldown = self.shoot_delay
@@ -202,6 +205,7 @@ class Enemy:
             for i in range(5):
                 angle_offset = (i - 2) * 0.3
                 bullets.append(Bullet(self.x, self.y, self.angle + angle_offset, 7, 8 * dmg_multi, 2, "enemy"))
+        '''
         elif self.type == EnemyType.SNIPER:
             # High damage, fast bullet
             bullets.append(Bullet(self.x, self.y, self.angle, 15, 25 * dmg_multi, 5, "enemy"))
@@ -212,6 +216,7 @@ class Enemy:
                 bullet = Bullet(self.x, self.y, self.angle + angle_offset, 9, 15 * dmg_multi, 4, "enemy")
                 bullet.radius = 10  # Bigger bullets
                 bullets.append(bullet)
+        '''
     
     def draw(self, screen, camera_x, camera_y):
         screen_x = int(self.x - camera_x)
@@ -252,6 +257,7 @@ class Enemy:
                 points.append((screen_x + math.cos(angle) * self.size,
                              screen_y + math.sin(angle) * self.size))
             pygame.draw.polygon(screen, color, points, thickness)
+        '''
         elif self.type == EnemyType.SNIPER:
             color = (150, 0, 200) if self.is_aggroed else (100, 0, 150)
             # Draw octagon for sniper
@@ -268,10 +274,11 @@ class Enemy:
             barrel_end_y = screen_y + math.sin(self.angle) * barrel_length
             pygame.draw.line(screen, color, (screen_x, screen_y), 
                            (barrel_end_x, barrel_end_y), 3)
+        '''
         
         # Optional: Draw aggro range indicator (for debugging)
-        # if not self.is_aggroed:
-        #     pygame.draw.circle(screen, (100, 100, 100), (screen_x, screen_y), self.aggro_range, 1)
+        if not self.is_aggroed:
+            pygame.draw.circle(screen, (100, 100, 100), (screen_x, screen_y), self.aggro_range, 1)
         
         # Health bar
         bar_width = 40 if not self.is_boss else 80
