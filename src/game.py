@@ -46,6 +46,10 @@ class Game:
         # Enemies
         self.enemy_spawn_points = []
 
+        # Boss Fight implementation
+        self.has_boss = False
+        self.boss_enemy = None
+
         # Collisions system
         self.collision_system = CollisionSystem() if 'CollisionSystem' in dir() else None
         
@@ -108,7 +112,7 @@ class Game:
             self.bullets.clear()
 
             # Spawn enemies
-            self.spawn_enemies()
+            self.spawn_enemies(self.current_level_number)
 
             # Track initial enemy count for progress bar
             self.initial_enemy_count = len(self.enemies)
@@ -128,12 +132,12 @@ class Game:
             print(f"❌ Failed to load level {level_number}, using empty map")
             self.walls = []
     
-    def spawn_enemies(self):
+    def spawn_enemies(self, current_lvl): # Difficulty
         spawn_points = self.enemy_spawn_points
         for i in range(len(spawn_points)):
             spawn_x, spawn_y = spawn_points[i]
             enemy_type = random.choice(list(EnemyType)) # change this to choose what enemy type is
-            self.enemies.append(Enemy(spawn_x, spawn_y, enemy_type))
+            self.enemies.append(Enemy(spawn_x, spawn_y, enemy_type, current_lvl))
 
         '''
         for _ in range(count):
@@ -279,11 +283,14 @@ class Game:
             
             if hasattr(enemy, 'rect'):
                 enemy.rect.center = (enemy.x, enemy.y)
+
+            # Dmg multi based on level
+            dmg_multi = 1 + (self.current_level_number * 0.1)
             
             # Deal contact damage
             current_time = pygame.time.get_ticks()
             if not hasattr(enemy, 'last_contact_damage') or current_time - enemy.last_contact_damage > 1000:
-                self.player.hp -= 5
+                self.player.hp -= 5 * dmg_multi
                 self.player.last_damage_time = current_time
                 enemy.last_contact_damage = current_time           
                 if self.player.hp <= 0:
@@ -344,7 +351,8 @@ class Game:
             if bullet.owner_type == "enemy":
                 dist = math.sqrt((bullet.x - self.player.x)**2 + (bullet.y - self.player.y)**2)
                 if dist < self.player.size:
-                    self.player.hp -= bullet.damage
+                    dmg_multi = 1 + (self.current_level_number * 0.1)
+                    self.player.hp -= bullet.damage * dmg_multi
                     self.player.last_damage_time = pygame.time.get_ticks()
                     if bullet in self.bullets:
                         self.bullets.remove(bullet)
@@ -389,7 +397,7 @@ class Game:
             #self.player.skill_points = 0
             self.enemies.clear()
             self.bullets.clear()
-            self.spawn_enemies()
+            self.spawn_enemies(self.current_level_number)
         elif result == 'menu':
             self.running = False
             return 'menu'
@@ -566,15 +574,6 @@ class Game:
 
         # Draw minimap (add at the end of draw_ui)
         self.minimap.draw(self.screen, self.player, self.enemies, self.walls)
-
-    def proceed_to_next_level(self):
-        """Handle transition to next level"""
-        next_level = self.current_level_number + 1
-        transition = LevelTransition(self.current_level_number, next_level)
-        if transition.show(self.screen):
-            self.load_level(next_level)
-        else:
-            self.running = False
     
     def run(self):
         while self.running:

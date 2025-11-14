@@ -16,6 +16,8 @@ class EnemyType(Enum):
     SQUARE_TURRET = 1
     TRIANGLE_BLADE = 2
     PENTAGON_GUNNER = 3
+    #SNIPER = 4
+    #BOSS = 5
 
 class BarrierType(Enum):
     WALL = "wall"

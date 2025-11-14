@@ -16,6 +16,8 @@ After conversion, you never need to run this again unless you edit the PNG.
 # ff0000 the red used for the barriers to be opened
 # 3aff00 the green used to represent the spawn point
 # ff00fa the pink used to represent the enemy spawn points
+# fffa00 the yellow is for a boss
+# ff7400 the orange is for stationary snipers
 import pygame
 import json
 import os
