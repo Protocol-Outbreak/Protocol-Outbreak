@@ -59,4 +59,4 @@ If accessing via Visual Studio Code (easiest way):
 5. Open the terminal in VS Code
 6. Near the top right of the terminal, there is a + and a down arrow. Press the down arrow, and open powershell, and download pygame (if you haven't already)
 7. Type pip install pygame into the powershell window
-8. Find main.py and run it, or type run main.py or python -m src.main in Git Bash
+8. Find main.py and run it, or type python main.py or python -m src.main in Git Bash
