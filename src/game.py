@@ -17,6 +17,7 @@ from src.ui.level_transition import LevelTransition
 from src.ui.level_progress_ui import LevelProgressUI
 from src.ui.minimap import Minimap
 from src.entities.particle import ParticleSystem
+from src.ui.notification import NotificationManager
 
 
 class Game:
@@ -61,6 +62,7 @@ class Game:
         self.level_progress_ui = LevelProgressUI()
         self.minimap = Minimap(self.world_width, self.world_height)
         self.particle_system = ParticleSystem()
+        self.notification_manager = NotificationManager()
 
         # Level progress
         self.initial_enemy_count = 0
@@ -68,7 +70,7 @@ class Game:
         self.next_level_button_rect = None
 
         # Time limit
-        self.time_limit = 300 # seconds (5 minutes)
+        self.time_limit = 180 # seconds (3 minutes)
         self.elapsed_time = 0
         self.time_up = False
 
@@ -361,7 +363,7 @@ class Game:
                                 speed=4
                             )
                             
-                            self.player.gain_xp(enemy.xp_value)
+                            self.player.gain_xp(enemy.xp_value, self)
                             self.enemies.remove(enemy)
                         
                         if bullet.health <= 0 and bullet in self.bullets:
@@ -422,7 +424,7 @@ class Game:
         enemies_killed = self.initial_enemy_count - len(self.enemies)
         final_score = (self.player.level * 100) + (enemies_killed * 50)
 
-        game_over = GameOverScreen(score=(self.player.level - 1) * 100)
+        game_over = GameOverScreen(score=final_score)  # ✅ FIXED - Now using final_score!
         result = game_over.run()
         
         if result == 'retry':
@@ -514,6 +516,9 @@ class Game:
         # Clamp camera to world bounds
         self.camera_x = max(0, min(self.camera_x, self.world_width - SCREEN_WIDTH))
         self.camera_y = max(0, min(self.camera_y, self.world_height - SCREEN_HEIGHT))
+        
+        # Update notifications
+        self.notification_manager.update(1/60.0)
     
     def draw(self):
         self.screen.fill(BLACK)
@@ -662,6 +667,9 @@ class Game:
 
         # Draw minimap (add at the end of draw_ui)
         self.minimap.draw(self.screen, self.player, self.enemies, self.walls)
+        
+        # Draw notifications
+        self.notification_manager.draw(self.screen)
     
     def run(self):
         while self.running:
