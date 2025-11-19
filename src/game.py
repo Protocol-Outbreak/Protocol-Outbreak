@@ -16,6 +16,7 @@ from src.levels.map_generator import MapGenerator
 from src.ui.level_transition import LevelTransition
 from src.ui.level_progress_ui import LevelProgressUI
 from src.ui.minimap import Minimap
+from src.entities.particle import ParticleSystem
 
 
 class Game:
@@ -59,6 +60,7 @@ class Game:
         self.stat_ui = StatUpgradeUI() #Ui representing stat points upgrade
         self.level_progress_ui = LevelProgressUI()
         self.minimap = Minimap(self.world_width, self.world_height)
+        self.particle_system = ParticleSystem()
 
         # Level progress
         self.initial_enemy_count = 0
@@ -338,12 +340,33 @@ class Game:
                         bullet.health -= 20
                         
                         if enemy.health <= 0:
+                            # CREATE EXPLOSION WHEN ENEMY DIES
+                            enemy_color = self.get_enemy_color(enemy)
+                            self.particle_system.create_explosion(
+                                enemy.x, 
+                                enemy.y, 
+                                enemy_color,
+                                particle_count=20,
+                                speed=4
+                            )
+                            
                             self.player.gain_xp(enemy.xp_value)
                             self.enemies.remove(enemy)
                         
                         if bullet.health <= 0 and bullet in self.bullets:
                             self.bullets.remove(bullet)
                         break
+
+    def get_enemy_color(self, enemy):
+        """Get the color for an enemy based on type"""
+        if enemy.type == EnemyType.SQUARE_TURRET:
+            return CORRUPTION_PINK
+        elif enemy.type == EnemyType.TRIANGLE_BLADE:
+            return CORRUPTION_ORANGE
+        elif enemy.type == EnemyType.PENTAGON_GUNNER:
+            return (255, 100, 100)
+        else:
+            return CORRUPTION_PINK
     
     def _check_enemy_bullets_vs_player(self):
         """Check enemy bullets hitting player"""
@@ -437,6 +460,9 @@ class Game:
         # Save old enemy positions
         enemy_old_positions = [(enemy.x, enemy.y) for enemy in self.enemies]
 
+        # Update particles
+        self.particle_system.update()
+
         # Update enemies
         for enemy in self.enemies[:]:
             enemy.update(self.player.x, self.player.y, self.bullets)
@@ -494,6 +520,16 @@ class Game:
         # Draw all entities in sorted order
         for entity in sorted_entities:
             entity.draw(self.screen, self.camera_x, self.camera_y)
+
+        # Draw all entities in sorted order
+        for entity in sorted_entities:
+            entity.draw(self.screen, self.camera_x, self.camera_y)
+
+        # Draw particles
+        self.particle_system.draw(self.screen, self.camera_x, self.camera_y)
+
+        # Draw UI (always on top, no z_index needed)
+        self.draw_ui()
         
         # Draw UI (always on top, no z_index needed)
         self.draw_ui()
