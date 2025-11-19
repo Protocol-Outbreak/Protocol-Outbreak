@@ -130,11 +130,20 @@ class StatUpgradeUI:
         if not self.visible:
             return
         
-        # Background panel
+        # Background panel with transparency
         panel_height = 40 + (len(self.stat_order) * self.stat_height) + 10
-        pygame.draw.rect(screen, (20, 30, 40), 
-                        (self.x - 5, self.y - 5, self.width + 10, panel_height),
+
+        # Create a transparent surface
+        panel_surface = pygame.Surface((self.width + 10, panel_height), pygame.SRCALPHA)
+        pygame.draw.rect(panel_surface, (20, 30, 40, 100),  # ← 100 = transparency (0-255, lower = more transparent)
+                        (0, 0, self.width + 10, panel_height),
                         border_radius=5)
+        pygame.draw.rect(panel_surface, UI_CYAN + (200,),  # ← border with transparency
+                        (0, 0, self.width + 10, panel_height), 
+                        2, border_radius=5)
+
+        # Blit the transparent surface onto the screen
+        screen.blit(panel_surface, (self.x - 5, self.y - 5))
         pygame.draw.rect(screen, UI_CYAN, 
                         (self.x - 5, self.y - 5, self.width + 10, panel_height), 
                         2, border_radius=5)
