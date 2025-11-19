@@ -67,20 +67,32 @@ class Game:
         self.level_complete = False
         self.next_level_button_rect = None
 
+        # Time limit
+        self.time_limit = 300 # seconds (5 minutes)
+        self.elapsed_time = 0
+        self.time_up = False
+
         # Load first level
         self.load_level(0)
 
-
         # Spawn initial enemies
         #self.spawn_enemies(5)
+
+    def format_time(self, seconds):
+        """Convert seconds to MM:SS format"""
+        mins = int(seconds) // 60
+        secs = int(seconds) % 60
+        return f"{mins}:{secs:02d}"
         
-
-
     def load_level(self, level_number):
         """Load a level by number"""
         print(f"\n{'='*60}")
         print(f"Loading Level {level_number}...")
         print(f"{'='*60}")
+
+        # RESET TIMER FOR NEW LEVEL
+        self.elapsed_time = 0
+        self.time_up = False
         
         # Generate map from JSON
         map_result = MapGenerator.generate_map_from_json(level_number)
@@ -182,7 +194,6 @@ class Game:
                     self.player.tank_type = TankType.MACHINE_GUN
                 elif event.key == pygame.K_c:  # Press 'C' to clear all enemies for testing purposes
                     self.enemies.clear() 
-
 
                 elif event.key == pygame.K_k:
                     self.stat_ui.toggle_visibility()
@@ -406,6 +417,11 @@ class Game:
         """Handle player death and game over screen"""
         print('trying to attempt')
         self.player.hp = 0
+        
+        # Calculate final score: (level * 100) + (enemies killed * 50)
+        enemies_killed = self.initial_enemy_count - len(self.enemies)
+        final_score = (self.player.level * 100) + (enemies_killed * 50)
+
         game_over = GameOverScreen(score=(self.player.level - 1) * 100)
         result = game_over.run()
         
@@ -420,7 +436,13 @@ class Game:
             #self.player.skill_points = 0
             self.enemies.clear()
             self.bullets.clear()
+            self.particle_system.clear()
             self.spawn_enemies(self.current_level_number)
+            
+            # RESET TIMER
+            self.elapsed_time = 0
+            self.time_up = False
+        
         elif result == 'menu':
             self.running = False
             return 'menu'
@@ -435,6 +457,14 @@ class Game:
         keys = pygame.key.get_pressed()
         mouse_pos = pygame.mouse.get_pos()
         mouse_buttons = pygame.mouse.get_pressed()
+
+        # Update elapsed time
+        self.elapsed_time += 1/60.0  # Add 1/60th of a second per frame
+        
+        # Check if time is up
+        if self.elapsed_time >= self.time_limit and not self.time_up:
+            self.time_up = True
+            return self._handle_player_death()
 
         # Store player's old position
         old_x = self.player.x
@@ -521,22 +551,45 @@ class Game:
         for entity in sorted_entities:
             entity.draw(self.screen, self.camera_x, self.camera_y)
 
-        # Draw all entities in sorted order
-        for entity in sorted_entities:
-            entity.draw(self.screen, self.camera_x, self.camera_y)
-
         # Draw particles
         self.particle_system.draw(self.screen, self.camera_x, self.camera_y)
 
         # Draw UI (always on top, no z_index needed)
         self.draw_ui()
         
-        # Draw UI (always on top, no z_index needed)
-        self.draw_ui()
-        
         pygame.display.flip()
     
     def draw_ui(self):
+        # Time limit display (top center)
+        remaining_time = max(0, self.time_limit - self.elapsed_time)
+        time_text_str = self.format_time(remaining_time)
+        
+        # Change color if time is running out
+        if remaining_time < 3:  # Red if less than 3 seconds
+            time_color = (255, 0, 0)
+        elif remaining_time < 5:  # Orange if less than 5 seconds
+            time_color = (255, 165, 0)
+        else:
+            time_color = WHITE
+        
+        # Draw time with background for visibility
+        time_text = self.font.render(f"TIMER: {time_text_str}", True, time_color)
+
+        # Draw background box for time (with transparency)
+        box_rect = time_text.get_rect(center=(SCREEN_WIDTH // 2, 70))
+        inflated_rect = box_rect.inflate(100, 10)
+
+        # Create transparent surface for background
+        bg_surface = pygame.Surface(inflated_rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(bg_surface, (0, 0, 0, 0), bg_surface.get_rect())  # LAST NUMBER IS THE TRANSPARENCY
+        self.screen.blit(bg_surface, inflated_rect.topleft)
+
+        # Draw border (stays opaque)
+        pygame.draw.rect(self.screen, time_color, inflated_rect, 2)
+
+        # Draw text
+        self.screen.blit(time_text, box_rect)
+                
         # Enemy progress bar
         self.level_progress_ui.draw_enemy_progress_bar(
             self.screen, 
@@ -548,7 +601,6 @@ class Game:
         # Level Complete Button
         if self.level_complete:
             self.level_progress_ui.draw_next_level_button(self.screen)
-        
 
         # Health bar
         bar_x = 20
