@@ -520,9 +520,9 @@ class Game:
         bar_width = 300
         bar_height = 20
         
-        pygame.draw.rect(self.screen, UI_GRAY, (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(self.screen, UI_RED, (bar_x, bar_y, bar_width, bar_height))
         health_percent = self.player.hp / self.player.max_hp
-        pygame.draw.rect(self.screen, CLEAN_BLUE, 
+        pygame.draw.rect(self.screen, CLEAN_GREEN, 
                         (bar_x, bar_y, int(bar_width * health_percent), bar_height))
         
         health_text = self.font.render(f"HP: {int(self.player.hp)}/{self.player.max_hp}", 
