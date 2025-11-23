@@ -123,6 +123,9 @@ class Game:
             if hasattr(self.player, 'rect'):
                 self.player.rect.center = (spawn_x, spawn_y)
             
+            # Activate 3 second invulnerability shield
+            self.player.activate_invulnerability(3.0)
+            
             # Clear existing entities
             self.enemies.clear()
             self.bullets.clear()
@@ -302,9 +305,9 @@ class Game:
             # Dmg multi based on level
             dmg_multi = 1 + (self.current_level_number * 0.1)
             
-            # Deal contact damage
+            # Deal contact damage (skip if invulnerable)
             current_time = pygame.time.get_ticks()
-            if not hasattr(enemy, 'last_contact_damage') or current_time - enemy.last_contact_damage > 1000:
+            if not self.player.invulnerable and (not hasattr(enemy, 'last_contact_damage') or current_time - enemy.last_contact_damage > 1000):
                 self.player.hp -= 5 * dmg_multi
                 self.player.last_damage_time = current_time
                 enemy.last_contact_damage = current_time           
@@ -386,7 +389,7 @@ class Game:
         for bullet in self.bullets[:]:
             if bullet.owner_type == "enemy":
                 dist = math.sqrt((bullet.x - self.player.x)**2 + (bullet.y - self.player.y)**2)
-                if dist < self.player.size:
+                if dist < self.player.size and not self.player.invulnerable:  # Check invulnerability
                     dmg_multi = 1 + (self.current_level_number * 0.1)
                     self.player.hp -= bullet.damage * dmg_multi
                     self.player.last_damage_time = pygame.time.get_ticks()
@@ -565,6 +568,28 @@ class Game:
         pygame.display.flip()
     
     def draw_ui(self):
+        # ===== INVULNERABILITY SHIELD VISUAL =====
+        if self.player.invulnerable:
+            # Calculate time remaining
+            time_remaining = max(0, (self.player.invulnerability_end_time - pygame.time.get_ticks()) / 1000.0)
+            # Create pulsing shield effect
+            shield_intensity = (abs(math.sin(pygame.time.get_ticks() * 0.01)) + 0.5) * 100
+            shield_overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            shield_overlay.fill((0, 200, 255, int(shield_intensity * 0.15)))  # Cyan flash
+            self.screen.blit(shield_overlay, (0, 0))
+            
+            # Draw shield timer text
+            shield_text = self.font.render(f"SHIELD: {time_remaining:.1f}s", True, (0, 200, 255))
+            self.screen.blit(shield_text, (SCREEN_WIDTH // 2 - shield_text.get_width() // 2, 30))
+        
+        # ===== RED FLASH EFFECT WHEN HEALTH <= 50% =====
+        if self.player.hp <= self.player.max_hp * 0.5:
+            # Create pulsing flash effect based on time
+            flash_intensity = abs(math.sin(pygame.time.get_ticks() * 0.005)) * 100
+            red_overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            red_overlay.fill((255, 0, 0, int(flash_intensity * 0.4)))  # Red with varying alpha
+            self.screen.blit(red_overlay, (0, 0))
+        
         # Time limit display (top center)
         remaining_time = max(0, self.time_limit - self.elapsed_time)
         time_text_str = self.format_time(remaining_time)
