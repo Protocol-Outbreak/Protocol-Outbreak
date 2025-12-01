@@ -8,8 +8,6 @@ from src.systems.attack_system import ShootingSystem
 from src.configs.tank_configs import TANK_CONFIGS
 
 
-
-
 class Player:
     def __init__(self, x, y):
         self.x = x
@@ -97,21 +95,32 @@ class Player:
     def shoot(self, bullets):
         ShootingSystem.shoot(self, bullets)
     
-    def gain_xp(self, amount):
+    def gain_xp(self, amount, game=None):
         self.xp += amount # currently buffed amount of xp earned for testing purposes
         if self.xp >= self.xp_to_next_level:
-            self.level_up()
+            self.level_up(game)
     
-    def level_up(self):
+    def level_up(self, game=None):
         self.level += 1
         self.xp -= self.xp_to_next_level
         self.xp_to_next_level = int(self.xp_to_next_level * 1) # makes leveling up more difficult
         
         # Award skill point (simplified - should follow diep.io rules)
         self.skill_points += 1
+        
+        # Show skill point notification
+        if game and hasattr(game, 'notification_manager'):
+            game.notification_manager.add_notification(
+                "You unlocked a Skill Point!",
+                x=SCREEN_WIDTH // 2,
+                y=200,
+                duration=3.0,
+                font_size=36,
+                color=(100, 255, 100)
+            )
+        
         if self.level == 1:
             self.tank_type = TankType.BASIC
-            #self.skill_points += 1
         elif self.level == 3:
             self.tank_type = TankType.TWIN
         elif self.level == 6:
@@ -126,10 +135,6 @@ class Player:
             self.tank_type = TankType.SNIPER
         elif self.level == 21:
             self.tank_type = TankType.MACHINE_GUN
-        
-            #self.skill_points += 1
-        #elif self.level > 4 and (self.level - 30) % 3 == 0:
-            #self.skill_points += 1
     
     def draw(self, screen, camera_x, camera_y):
         TankRenderer.draw_tank(screen, self, camera_x, camera_y)
