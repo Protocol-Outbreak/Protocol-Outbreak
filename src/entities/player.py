@@ -42,6 +42,10 @@ class Player:
         self.hp = self.max_hp
         self.last_damage_time = 0
         
+        # Invulnerability Shield (3 second protection when level starts)
+        self.invulnerable = False
+        self.invulnerability_end_time = 0
+        
         # Movement
         self.base_speed = 3
         self.speed = self.base_speed + (self.stats['movement_speed'] * 0.5)
@@ -51,11 +55,26 @@ class Player:
         self.base_reload = 40 * tank_default['reload_speed'] # set tank reload to the base of current tank type
          
         self.size = 35
-        
+    
+    def activate_invulnerability(self, duration=3.0):
+        """Activate invulnerability shield for specified duration (in seconds)"""
+        self.invulnerable = True
+        self.invulnerability_end_time = pygame.time.get_ticks() + (duration * 1000)
+    
+    def update_invulnerability(self):
+        """Update invulnerability status - call this in update() method"""
+        if self.invulnerable:
+            current_time = pygame.time.get_ticks()
+            if current_time >= self.invulnerability_end_time:
+                self.invulnerable = False
+    
     def get_reload_speed(self):
         return max(5, self.base_reload - (self.stats['reload'] * 2))
     
     def update(self, keys, mouse_pos, camera_x, camera_y):
+        # Update invulnerability status
+        self.update_invulnerability()
+        
         # Movement
         dx = 0
         dy = 0
