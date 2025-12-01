@@ -16,6 +16,13 @@ class Player:
         self.tank_type = TankType.BASIC
         self.z_index = 100  # Layer: Player drawn on top of enemies and bullets
         
+        # Visual enhancements
+        self.rotation_angle = 0  # For rotating middle ring
+        self.outer_ring_pulse = 0  # For pulsing outer ring
+        self.position_trail = []  # Track recent positions for movement trail
+        self.damage_flash_time = 0  # For damage visual feedback
+        self.last_hp = 100  # Track HP changes
+        
         # Stats (0-7 points each)
         self.stats = {
             'health_regen': 0,
@@ -75,6 +82,15 @@ class Player:
         # Update invulnerability status
         self.update_invulnerability()
         
+        # Update visual effects
+        self.rotation_angle += 1  # Slow rotation for middle ring
+        self.outer_ring_pulse += 0.1  # Pulse speed for outer ring
+        
+        # Track damage for visual feedback
+        if self.hp < self.last_hp:
+            self.damage_flash_time = pygame.time.get_ticks()
+        self.last_hp = self.hp
+        
         # Movement
         dx = 0
         dy = 0
@@ -91,6 +107,20 @@ class Player:
         if dx != 0 and dy != 0:
             dx *= 0.707
             dy *= 0.707
+        
+        # Update position trail (only if moving)
+        if dx != 0 or dy != 0:
+            self.position_trail.append({
+                'x': self.x,
+                'y': self.y,
+                'time': pygame.time.get_ticks()
+            })
+            # Keep only last 3 positions
+            if len(self.position_trail) > 3:
+                self.position_trail.pop(0)
+        else:
+            # Clear trail when stationary
+            self.position_trail.clear()
         
         self.x += dx * self.speed
         self.y += dy * self.speed

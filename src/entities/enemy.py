@@ -21,6 +21,11 @@ class Enemy:
         self.z_index = 50  # Layer: Enemies drawn above bullets, below player
         self.game_level = lvl
         
+        # Visual enhancements
+        self.rotation_angle = random.uniform(0, 360)  # Independent rotation
+        self.scale_pulse = 0  # For breathing effect
+        self.attack_telegraph_time = 0  # Glow before shooting
+        
         # Aggro system
         self.is_aggroed = False
         self.aggro_range = 300  # Distance at which enemy notices player
@@ -96,6 +101,10 @@ class Enemy:
         self.is_aggroed = True  # Getting hit always aggros
     
     def update(self, player_x, player_y, bullets):
+        # Update visual effects
+        self.rotation_angle += 0.5  # Slow rotation for all enemies
+        self.scale_pulse += 0.05  # Breathing animation
+        
         # Calculate distance to player
         dx = player_x - self.x
         dy = player_y - self.y
@@ -155,6 +164,12 @@ class Enemy:
                 if distance < shoot_range:
                     self.shoot(bullets)
                     self.shoot_cooldown = self.shoot_delay
+            
+            # Attack telegraph - glow before shooting
+            if self.shoot_cooldown > 0 and self.shoot_cooldown <= 20:
+                self.attack_telegraph_time = self.shoot_cooldown
+            else:
+                self.attack_telegraph_time = 0
         else:
             # Idle behavior
             self.angle += 0.02
@@ -222,41 +237,77 @@ class Enemy:
         screen_x = int(self.x - camera_x)
         screen_y = int(self.y - camera_y)
         
+        # Breathing scale animation (95% to 105%)
+        scale_factor = 1 + (math.sin(self.scale_pulse) * 0.05)
+        current_size = int(self.size * scale_factor)
+        
+        # Attack telegraph - brighten and grow
+        telegraph_scale = 1.0
+        telegraph_brightness = 1.0
+        if self.attack_telegraph_time > 0:
+            telegraph_scale = 1.0 + (self.attack_telegraph_time / 20 * 0.15)  # Grow up to 15%
+            telegraph_brightness = 1.0 + (self.attack_telegraph_time / 20 * 0.5)  # Brighten 50%
+            current_size = int(current_size * telegraph_scale)
+        
         # Draw shield effect for boss
         if self.shield_active:
-            pygame.draw.circle(screen, (100, 200, 255), (screen_x, screen_y), self.size + 10, 2)
-            pygame.draw.circle(screen, (100, 200, 255, 50), (screen_x, screen_y), self.size + 8, 1)
+            pygame.draw.circle(screen, (100, 200, 255), (screen_x, screen_y), current_size + 10, 2)
+            pygame.draw.circle(screen, (100, 200, 255, 50), (screen_x, screen_y), current_size + 8, 1)
         
         # Choose color based on aggro state and type
         if self.type == EnemyType.SQUARE_TURRET:
-            color = CORRUPTION_PINK if self.is_aggroed else CLEAN_BLUE
-            pygame.draw.rect(screen, color, 
-                           (screen_x - self.size//2, screen_y - self.size//2, self.size, self.size), 2)
+            base_color = CORRUPTION_PINK if self.is_aggroed else CLEAN_BLUE
+            # Apply telegraph brightness
+            color = tuple(min(255, int(c * telegraph_brightness)) for c in base_color)
+            # Use rotation_angle for consistent rotation
+            rect_surface = pygame.Surface((current_size * 2, current_size * 2), pygame.SRCALPHA)
+            pygame.draw.rect(rect_surface, color, 
+                           (current_size//2, current_size//2, current_size, current_size), 2)
+            rotated_rect = pygame.transform.rotate(rect_surface, self.rotation_angle)
+            rect_rect = rotated_rect.get_rect(center=(screen_x, screen_y))
+            screen.blit(rotated_rect, rect_rect)
+            
         elif self.type == EnemyType.TRIANGLE_BLADE:
-            color = CORRUPTION_ORANGE if self.is_aggroed else CORRUPTION_PINK
+            base_color = CORRUPTION_ORANGE if self.is_aggroed else CORRUPTION_PINK
+            color = tuple(min(255, int(c * telegraph_brightness)) for c in base_color)
+            # Triangle points at cursor when aggroed, rotates when idle
+            angle = self.angle if self.is_aggroed else math.radians(self.rotation_angle)
             points = [
-                (screen_x + math.cos(self.angle) * self.size, 
-                 screen_y + math.sin(self.angle) * self.size),
-                (screen_x + math.cos(self.angle + 2.4) * self.size, 
-                 screen_y + math.sin(self.angle + 2.4) * self.size),
-                (screen_x + math.cos(self.angle - 2.4) * self.size, 
-                 screen_y + math.sin(self.angle - 2.4) * self.size)
+                (screen_x + math.cos(angle) * current_size, 
+                 screen_y + math.sin(angle) * current_size),
+                (screen_x + math.cos(angle + 2.4) * current_size, 
+                 screen_y + math.sin(angle + 2.4) * current_size),
+                (screen_x + math.cos(angle - 2.4) * current_size, 
+                 screen_y + math.sin(angle - 2.4) * current_size)
             ]
             pygame.draw.polygon(screen, color, points, 2)
+            
         elif self.type == EnemyType.PENTAGON_GUNNER or self.type == EnemyType.BOSS:
             if self.is_boss:
-                color = (255, 50, 50) if self.is_aggroed else (200, 100, 0)
+                base_color = (255, 50, 50) if self.is_aggroed else (200, 100, 0)
                 thickness = 4
             else:
-                color = (255, 100, 100) if self.is_aggroed else CORRUPTION_ORANGE
+                base_color = (255, 100, 100) if self.is_aggroed else CORRUPTION_ORANGE
                 thickness = 2
             
+            color = tuple(min(255, int(c * telegraph_brightness)) for c in base_color)
+            
+            # Pentagon rotates continuously
             points = []
             for i in range(5):
-                angle = self.angle + (i * math.pi * 2 / 5)
-                points.append((screen_x + math.cos(angle) * self.size,
-                             screen_y + math.sin(angle) * self.size))
+                angle = math.radians(self.rotation_angle) + (i * math.pi * 2 / 5)
+                points.append((screen_x + math.cos(angle) * current_size,
+                             screen_y + math.sin(angle) * current_size))
             pygame.draw.polygon(screen, color, points, thickness)
+            
+            # Draw inner spinning geometry for gunners when attacking
+            if self.attack_telegraph_time > 0 and not self.is_boss:
+                inner_points = []
+                for i in range(5):
+                    angle = math.radians(-self.rotation_angle * 2) + (i * math.pi * 2 / 5)
+                    inner_points.append((screen_x + math.cos(angle) * current_size * 0.5,
+                                       screen_y + math.sin(angle) * current_size * 0.5))
+                pygame.draw.polygon(screen, color, inner_points, 1)
         '''
         elif self.type == EnemyType.SNIPER:
             color = (150, 0, 200) if self.is_aggroed else (100, 0, 150)

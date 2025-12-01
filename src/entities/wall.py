@@ -47,17 +47,11 @@ class Wall:
             pygame.draw.rect(screen, (255, 100, 100), 
                            (draw_x, draw_y, self.rect.width, self.rect.height), 3)
             
-            # Warning stripes
-            stripe_spacing = 20
-            for i in range(0, self.rect.width + self.rect.height, stripe_spacing * 2):
-                stripe_start_x = draw_x + i
-                stripe_start_y = draw_y
-                stripe_end_x = draw_x + i - self.rect.height
-                stripe_end_y = draw_y + self.rect.height
-                
-                pygame.draw.line(screen, (255, 200, 0), 
-                               (stripe_start_x, stripe_start_y), 
-                               (stripe_end_x, stripe_end_y), 2)
+            # Inner glow effect (no diagonal stripes)
+            inner_glow_color = (200, 80, 80)
+            pygame.draw.rect(screen, inner_glow_color, 
+                           (draw_x + 5, draw_y + 5, 
+                            self.rect.width - 10, self.rect.height - 10), 2)
         else:
                         # Normal border for other walls
             border_color = (80, 80, 80) if self.wall_type != "border" else (30, 30, 30)
