@@ -18,6 +18,7 @@ from src.ui.level_progress_ui import LevelProgressUI
 from src.ui.minimap import Minimap
 from src.entities.particle import ParticleSystem
 from src.ui.notification import NotificationManager
+from src.ui.victory_screen import VictoryScreen
 
 
 class Game:
@@ -70,7 +71,7 @@ class Game:
         self.next_level_button_rect = None
 
         # Time limit
-        self.time_limit = 180 # seconds (3 minutes)
+        self.time_limit = 24 * 60 # minutes (24 minutes)
         self.elapsed_time = 0
         self.time_up = False
 
@@ -209,21 +210,48 @@ class Game:
                     elif self.level_complete and self.level_progress_ui.check_button_click(event.pos):
                             self.proceed_to_next_level()
 
-# Level Progression
-
+    # Level Progression
     def proceed_to_next_level(self):
-        """Handle transition to next level"""
-        next_level = self.current_level_number + 1
+        """Handle transition to next level or victory screen"""
         
-        # Show transition screen
-        transition = LevelTransition(self.current_level_number, next_level)
-        if transition.show(self.screen):
-            # Load next level
-            self.load_level(next_level)
+        # === CHECK IF THIS WAS THE FINAL LEVEL ===
+        if self.current_level_number == 1:
+            # Player completed layer 5 (the 6th and final layer)
+            # Show VICTORY screen instead of transition
+            
+            from src.ui.victory_screen import VictoryScreen
+            
+            victory = VictoryScreen(
+                self.elapsed_time,           # Total time taken
+                #self.enemies_killed,         # Total enemies eliminated
+                self.player.level,           # Final player level
+                getattr(self.player, 'death_count', 0)  # Deaths (if tracked)
+            )
+            
+            result = victory.show(self.screen)
+            
+            if result == 'menu':
+                # Return to main menu
+                self.running = False
+                return 'menu'
+            elif result == 'quit':
+                # Close game
+                self.running = False
+                return None
+        
         else:
-            # User closed window during transition
-            self.running = False
-    
+            # === NORMAL LEVEL TRANSITION (Layers 0-4) ===
+            next_level = self.current_level_number + 1
+            
+            # Show transition screen
+            transition = LevelTransition(self.current_level_number, next_level)
+            if transition.show(self.screen):
+                # Load next level
+                self.load_level(next_level)
+            else:
+                # User closed window during transition
+                self.running = False
+        
 # ========== COLLISION DETECTION METHODS ==========
     
     def handle_player_wall_collision(self, old_x, old_y):
@@ -590,30 +618,67 @@ class Game:
             red_overlay.fill((255, 0, 0, int(flash_intensity * 0.4)))  # Red with varying alpha
             self.screen.blit(red_overlay, (0, 0))
         
-        # Time limit display (top center)
+        # ===== ENHANCED MISSION TIMER (SMART UNIT DISPLAY) =====
         remaining_time = max(0, self.time_limit - self.elapsed_time)
-        time_text_str = self.format_time(remaining_time)
-        
-        # Change color if time is running out
-        if remaining_time < 3:  # Red if less than 3 seconds
-            time_color = (255, 0, 0)
-        elif remaining_time < 5:  # Orange if less than 5 seconds
-            time_color = (255, 165, 0)
+
+        # === EDEN TIME DISPLAY ===
+        # If over 60 seconds, show as minutes:seconds
+        if remaining_time >= 60:
+            eden_minutes = int(remaining_time // 60)
+            eden_seconds = int(remaining_time % 60)
+            eden_display = f"{eden_minutes}:{eden_seconds:02d}m"
         else:
-            time_color = WHITE
-        
-        # Draw time with background for visibility
-        time_text = self.font.render(f"TIMER: {time_text_str}", True, time_color)
+            # Under 60 seconds, just show seconds
+            eden_display = f"{int(remaining_time)}s"
 
-        # Draw background box for time (with transparency)
+        # === REAL WORLD TIME DISPLAY (1 EDEN minute = 3 real hours) ===
+        real_total_hours = remaining_time / 60 * 3  # Convert to real hours
+
+        # If over 24 hours, show as days + hours
+        if real_total_hours >= 24:
+            real_days = int(real_total_hours // 24)
+            real_hours = int(real_total_hours % 24)
+            if real_hours > 0:
+                real_display = f"{real_days}d {real_hours}h"
+            else:
+                real_display = f"{real_days}d"
+        else:
+            # Under 24 hours, show as hours + minutes
+            real_hours = int(real_total_hours)
+            real_minutes = int((real_total_hours % 1) * 60)
+            if real_minutes > 0:
+                real_display = f"{real_hours}h {real_minutes}m"
+            else:
+                real_display = f"{real_hours}h"
+
+        # Format the full display string
+        timer_text = f"EDEN: {eden_display} | REAL: {real_display}"
+
+        # Change color based on urgency
+        if remaining_time < 300:  # Less than 5 minutes
+            time_color = (255, 0, 0)  # Red
+        elif remaining_time < 600:  # Less than 10 minutes
+            time_color = (255, 165, 0)  # Orange
+        else:
+            time_color = (0, 255, 255)  # Cyan
+
+        # Render the text
+        time_text = self.font.render(timer_text, True, time_color)
+
+        # Draw background box for visibility
         box_rect = time_text.get_rect(center=(SCREEN_WIDTH // 2, 70))
-        inflated_rect = box_rect.inflate(100, 10)
+        inflated_rect = box_rect.inflate(40, 20)
 
-        # Create transparent surface for background
+        # Create semi-transparent background
         bg_surface = pygame.Surface(inflated_rect.size, pygame.SRCALPHA)
-        pygame.draw.rect(bg_surface, (0, 0, 0, 0), bg_surface.get_rect())  # LAST NUMBER IS THE TRANSPARENCY
+        bg_surface.fill((0, 0, 0, 200))
         self.screen.blit(bg_surface, inflated_rect.topleft)
 
+        # Draw border
+        pygame.draw.rect(self.screen, time_color, inflated_rect, 2)
+
+        # Draw the timer text
+        self.screen.blit(time_text, box_rect)
         # Draw border (stays opaque)
         pygame.draw.rect(self.screen, time_color, inflated_rect, 2)
 
