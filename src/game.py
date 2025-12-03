@@ -255,18 +255,49 @@ class Game:
 
     # Level Progression
     def proceed_to_next_level(self):
-        """Handle transition to next level"""
-        next_level = self.current_level_number + 1
+        """Handle transition to next level or victory screen"""
         
-        # Show transition screen
-        transition = LevelTransition(self.current_level_number, next_level)
-        if transition.show(self.screen):
-            # Load next level
-            self.load_level(next_level)
+        # === CHECK IF THIS WAS THE FINAL LEVEL ===
+        if self.current_level_number == 5:
+            # Player completed layer 5 (the 6th and final layer, since we start at 0)
+            # Show VICTORY screen instead of transition
+            
+            from src.ui.victory_screen import VictoryScreen
+            
+            # Calculate total enemies killed (if you're tracking this)
+            total_enemies_killed = getattr(self, 'enemies_killed', self.initial_enemy_count)
+            
+            victory = VictoryScreen(
+                self.elapsed_time,                      # Total time taken
+                total_enemies_killed,                   # Total enemies eliminated
+                self.player.level,                      # Final player level
+                getattr(self.player, 'death_count', 0)  # Deaths (0 if not tracked)
+            )
+            
+            result = victory.show(self.screen)
+            
+            if result == 'menu':
+                # Return to main menu
+                self.running = False
+                return 'menu'
+            elif result == 'quit':
+                # Close game
+                self.running = False
+                return None
+        
         else:
-            # User closed window during transition
-            self.running = False
-    
+            # === NORMAL LEVEL TRANSITION (Layers 0-4) ===
+            next_level = self.current_level_number + 1
+            
+            # Show transition screen
+            transition = LevelTransition(self.current_level_number, next_level)
+            if transition.show(self.screen):
+                # Load next level
+                self.load_level(next_level)
+            else:
+                # User closed window during transition
+                self.running = False
+        
 # ========== COLLISION DETECTION METHODS ==========
     
     def handle_player_wall_collision(self, old_x, old_y):
