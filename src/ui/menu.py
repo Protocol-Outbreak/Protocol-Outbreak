@@ -286,13 +286,8 @@ class MenuApp:
         # Draw laser scan
         self.draw_laser_scan()
         
-        # ... rest of your draw code
-        
-        # Draw laser scan effect (behind everything)
-        self.draw_laser_scan()
-        
         # Draw semi-transparent overlay panel - MADE TALLER
-        panel_rect = pg.Rect(50, 40, WIDTH - 100, HEIGHT - 75)  # Changed from HEIGHT - 80
+        panel_rect = pg.Rect(40, 35, WIDTH - 80, HEIGHT - 70)  # Wider, taller
         panel_surface = pg.Surface((panel_rect.width, panel_rect.height), pg.SRCALPHA)
         panel_surface.fill((5, 10, 25, 220))
         
@@ -303,144 +298,199 @@ class MenuApp:
         # Title
         title = self.title_font.render("PROTOCOL: OUTBREAK", True, CYAN)
         title_shadow = self.title_font.render("PROTOCOL: OUTBREAK", True, DARK_CYAN)
-        self.screen.blit(title_shadow, (WIDTH//2 - title.get_width()//2 + 3, 73))
-        self.screen.blit(title, (WIDTH//2 - title.get_width()//2, 70))
+        self.screen.blit(title_shadow, (WIDTH//2 - title.get_width()//2 + 3, 68))
+        self.screen.blit(title, (WIDTH//2 - title.get_width()//2, 65))
         
         # Subtitle
-        subtitle = self.subtitle_font.render("You are humanity's failsafe — a nano drone sent into the machine that once saved us.", True, WHITE)
-        self.screen.blit(subtitle, (WIDTH//2 - subtitle.get_width()//2, 150))
+        subtitle = self.subtitle_font.render("Autonomous Combat AI - Humanity's Last Failsafe", True, WHITE)
+        self.screen.blit(subtitle, (WIDTH//2 - subtitle.get_width()//2, 140))
         
-        # Mission Briefing Section
-        y_offset = 185
+        # ========================================
+        # LEFT COLUMN
+        # ========================================
+        left_col_x = 90
+        y_offset = 180
         
-        heading = self.heading_font.render("MISSION BRIEFING", True, WHITE)
-        self.screen.blit(heading, (100, y_offset))
-        y_offset += 40
+        # Mission Briefing
+        heading = self.heading_font.render("MISSION", True, WHITE)
+        self.screen.blit(heading, (left_col_x, y_offset))
+        y_offset += 30
         
-        briefing_text = [
-            "The AI's neural nodes have been corrupted. Each level represents a deeper layer in its",
-            "consciousness. Your objective: infiltrate, survive, and destroy all infection points."
+        briefing_lines = [
+            "8 billion trapped in EDEN network",
+            "GUARDIAN AI corrupted by nanites",
+            "24 minutes to purge 6 layers",
+            "Restore logout - save them all"
         ]
-        for line in briefing_text:
-            text = self.body_font.render(line, True, WHITE)
-            self.screen.blit(text, (100, y_offset))
-            y_offset += 26
+        for line in briefing_lines:
+            text = self.body_font.render(line, True, (200, 200, 200))
+            self.screen.blit(text, (left_col_x + 10, y_offset))
+            y_offset += 20
         
-        # Objectives Section
-        y_offset += 12
-        objectives_heading = self.heading_font.render("OBJECTIVES", True, PURPLE)
-        self.screen.blit(objectives_heading, (100, y_offset))
-        y_offset += 35
-        
-        objectives = [
-            ("Eliminate all ", "Infection Nodes", " to progress"),
-            ("Survive waves of ", "Rogue Defense Units", ""),
-            ("Maintain system integrity (your health)", "", "")
-        ]
-        
-        for prefix, highlight, suffix in objectives:
-            # Draw bullet point
-            pg.draw.circle(self.screen, RED, (115, y_offset + 8), 4)
-            
-            x_pos = 140
-            if prefix:
-                t1 = self.body_font.render(prefix, True, WHITE)
-                self.screen.blit(t1, (x_pos, y_offset))
-                x_pos += t1.get_width()
-            if highlight:
-                t2 = self.body_font.render(highlight, True, RED)
-                self.screen.blit(t2, (x_pos, y_offset))
-                x_pos += t2.get_width()
-            if suffix:
-                t3 = self.body_font.render(suffix, True, WHITE)
-                self.screen.blit(t3, (x_pos, y_offset))
-            
-            y_offset += 26
-        
-        # Controls Section
-        y_offset += 12
+        # Controls
+        y_offset += 8
         controls_heading = self.heading_font.render("CONTROLS", True, CYAN)
-        self.screen.blit(controls_heading, (100, y_offset))
-        y_offset += 35
-        
+        self.screen.blit(controls_heading, (left_col_x, y_offset))
+        y_offset += 30
+
         controls = [
-            ("WASD/Arrow Keys", "Movement"),
-            ("Mouse/Space", "Aim & Fire")
+            ("WASD/Arrows", "Move"),
+            ("Mouse/Space", "Shoot"),
+            ("1-5", "Switch Tank"),
+            ("K", "Upgrade Stats"),
+            ("M", "Minimap")  # ← ADDED
         ]
-        
+
         for key, action in controls:
-            # Key box - make wider for "Mouse/Space"
-            box_width = 140 # if key == "Mouse/Space" else 80
-            key_box = pg.Rect(115, y_offset - 5, box_width, 28)
+            # Key box - compact
+            box_width = 90
+            key_box = pg.Rect(left_col_x + 10, y_offset - 4, box_width, 24)
             pg.draw.rect(self.screen, DARK_CYAN, key_box)
-            pg.draw.rect(self.screen, CYAN, key_box, 2)
+            pg.draw.rect(self.screen, CYAN, key_box, 1)
             
-            key_text = self.body_font.render(key, True, WHITE)
+            key_text = self.small_font.render(key, True, WHITE)
             self.screen.blit(key_text, (key_box.centerx - key_text.get_width()//2, key_box.centery - key_text.get_height()//2))
             
             action_text = self.body_font.render(action, True, WHITE)
-            self.screen.blit(action_text, (115 + box_width + 20, y_offset))
+            self.screen.blit(action_text, (left_col_x + 10 + box_width + 15, y_offset - 2))
             
-            y_offset += 35
+            y_offset += 28
         
-        # Enemy Types Section
+        # Enemy Types
         y_offset += 8
-        enemy_heading = self.heading_font.render("ENEMY TYPES", True, PURPLE)
-        self.screen.blit(enemy_heading, (100, y_offset))
-        y_offset += 35
+        enemy_heading = self.heading_font.render("THREATS", True, PURPLE)
+        self.screen.blit(enemy_heading, (left_col_x, y_offset))
+        y_offset += 30
         
         enemy_types = [
-            ("Turret Units", " - Stationary, rapid fire", RED),
-            ("Basic Units", " - Balanced threat", (255, 150, 50)),
-            ("Tank Units", " - Slow but heavily armored", (100, 150, 255))
+            ("Turrets", (255, 100, 150)),
+            ("Blades", (255, 150, 50)),
+            ("Gunners", (255, 100, 100)),
+            ("Bosses", (255, 50, 50))
         ]
         
-        for name, desc, color in enemy_types:
-            # Draw colored circle bullet
-            pg.draw.circle(self.screen, color, (115, y_offset + 8), 5)
-            
+        for name, color in enemy_types:
+            pg.draw.circle(self.screen, color, (left_col_x + 15, y_offset + 6), 4)
             name_text = self.body_font.render(name, True, WHITE)
-            self.screen.blit(name_text, (140, y_offset))
-            
-            desc_text = self.body_font.render(desc, True, WHITE)
-            self.screen.blit(desc_text, (140 + name_text.get_width(), y_offset))
-            
-            y_offset += 26
+            self.screen.blit(name_text, (left_col_x + 30, y_offset))
+            y_offset += 22
         
-        # Start Button
+        # ========================================
+        # RIGHT COLUMN
+        # ========================================
+        right_col_x = WIDTH // 2 + 60
+        y_offset = 180
+        
+        # Progression System
+        progression_heading = self.heading_font.render("PROGRESSION", True, (255, 215, 0))
+        self.screen.blit(progression_heading, (right_col_x, y_offset))
+        y_offset += 30
+        
+        prog_items = [
+            "Defeat enemies → Gain XP → Level up",
+            "Earn skill points each level",
+            "Upgrade 7 different stats",
+            "",
+            "LEVEL 5: Choose tank path",
+            "  • GUNNER - Area control",
+            "  • SNIPER - Precision damage",
+            "  • SPRAYER - Fire rate",
+            "",
+            "Levels 10 & 15: Auto-evolve",
+            "Each path has 3 tiers total"
+        ]
+        
+        for item in prog_items:
+            if item == "":
+                y_offset += 8
+                continue
+            
+            # Indent sub-items
+            x_indent = right_col_x + 10 if item.startswith("  •") else right_col_x + 10
+            
+            color = CYAN if "LEVEL 5" in item else (200, 200, 200)
+            text = self.body_font.render(item, True, color)
+            self.screen.blit(text, (x_indent, y_offset))
+            y_offset += 20
+        
+        # Stats Info
+        y_offset += 8
+        stats_heading = self.heading_font.render("STAT UPGRADES", True, (100, 255, 180))
+        self.screen.blit(stats_heading, (right_col_x, y_offset))
+        y_offset += 30
+        
+        stats_list = [
+            "Health Regen | Max Health",
+            "Bullet Speed | Bullet Pen",
+            "Bullet Damage | Reload Speed",
+            "Movement Speed"
+        ]
+        
+        for stat in stats_list:
+            text = self.body_font.render(stat, True, (200, 200, 200))
+            self.screen.blit(text, (right_col_x + 10, y_offset))
+            y_offset += 20
+        
+        # Tips
+        y_offset += 8
+        tips_heading = self.heading_font.render("TIPS", True, (255, 100, 150))
+        self.screen.blit(tips_heading, (right_col_x, y_offset))
+        y_offset += 28
+
+        tips = [
+            "• Penetration helps vs armored enemies",
+            "• Bosses shield at 75%, 50%, 25% HP"
+        ]
+
+        for tip in tips:
+            text = self.small_font.render(tip, True, (180, 180, 180))
+            self.screen.blit(text, (right_col_x + 10, y_offset))
+            y_offset += 18
+        
+        # ========================================
+        # START BUTTON
+        # ========================================
         mx, my = pg.mouse.get_pos()
         hovered = self.start_button.collidepoint(mx, my)
 
-        # Create a slightly larger button rect if hovered (pop-out effect)
+        # Pop-out effect when hovered
         if hovered:
-            button_rect = self.start_button.inflate(20, 8)  # Make it 20px wider, 8px taller
+            button_rect = self.start_button.inflate(20, 8)
         else:
             button_rect = self.start_button
 
+        # Create semi-transparent button surface
+        button_surface = pg.Surface((button_rect.width, button_rect.height), pg.SRCALPHA)
         button_color = BRIGHT_CYAN if hovered else CYAN
-        pg.draw.rect(self.screen, button_color, button_rect)
+        button_surface.fill((*button_color, 200))  # 200 = semi-transparent
+        self.screen.blit(button_surface, button_rect.topleft)
+
+        # Border (stays opaque)
         pg.draw.rect(self.screen, WHITE, button_rect, 2)
 
-        button_text = self.heading_font.render("INITIATE INFILTRATION", True, DARK_BG)
+        # Button text
+        button_text = self.heading_font.render("INITIATE PROTOCOL", True, DARK_BG)
         self.screen.blit(button_text, (button_rect.centerx - button_text.get_width()//2, 
                                     button_rect.centery - button_text.get_height()//2))
-                
-        # Warning at bottom
-        warning = self.small_font.render("Warning: As you descend deeper, the corruption intensifies. Enemies adapt. Stay alert.", True, (255, 255, 255))
-        self.screen.blit(warning, (WIDTH//2 - warning.get_width()//2, HEIGHT - 63))  # Moved up
+        # ========================================
+        # FOOTER
+        # ========================================
+        # Warning
+        warning = self.small_font.render("⚠️ As you descend deeper, corruption intensifies. Adapt or perish.", True, WHITE)
+        self.screen.blit(warning, (WIDTH//2 - warning.get_width()//2, HEIGHT - 58))
 
-        # Developers section at very bottom
+        # Developers
         developers = ["Jason He", "Cristian Gutierrez Espinoza", "Joshua Paulino Ozuna", "Ian Khanna"]
         dev_text = "Game created by: " + ", ".join(developers)
 
-        # Create semi-transparent bar at bottom
-        bar_height = 42
+        bar_height = 38
         bar = pg.Surface((WIDTH, bar_height), pg.SRCALPHA)
-        bar.fill((0, 0, 0, 0))  # LAST NUMBER IS THE TRANSPARENCY
+        bar.fill((0, 0, 0, 0))
         self.screen.blit(bar, (0, HEIGHT - bar_height))
 
         dev_label = self.dev_font.render(dev_text, True, WHITE)
         self.screen.blit(dev_label, (WIDTH//2 - dev_label.get_width()//2, HEIGHT - bar_height//2 - dev_label.get_height()//2 + 2))
+
 
 
 if __name__ == "__main__":
