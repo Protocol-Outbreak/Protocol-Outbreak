@@ -10,12 +10,26 @@ class LevelTransition:
         self.font_medium = pygame.font.Font(None, 48)
         self.font_small = pygame.font.Font(None, 32)
         
+        # === NEW: Users freed per layer ===
+        # This dictionary maps layer numbers to how many users were freed
+        self.users_per_layer = {
+            1: 800_000_000,   # 800 million
+            2: 1_100_000_000, # 1.1 billion
+            3: 1_200_000_000, # 1.2 billion
+            4: 1_400_000_000, # 1.4 billion
+            5: 1_600_000_000, # 1.6 billion
+            6: 1_900_000_000  # 1.9 billion
+        }
+        
     def show(self, screen):
         """Display transition screen for 4-5 seconds"""
         start_time = time.time()
         duration = 4.5  # seconds
         
         clock = pygame.time.Clock()
+        
+        # === NEW: Get users freed for this layer ===
+        users_freed = self.users_per_layer.get(self.current_level, 1_000_000_000)
         
         while time.time() - start_time < duration:
             # Handle events (allow closing window)
@@ -32,31 +46,55 @@ class LevelTransition:
             # Draw animated background
             self._draw_animated_background(screen, progress)
             
-            # Draw level completion text
+            # === ORIGINAL: Draw level completion text ===
             if progress < 0.3:
                 # Fade in "Level Complete"
                 alpha = int((progress / 0.3) * 255)
-                self._draw_text_with_fade(screen, f"Level {self.current_level} Complete!", 
-                                         SCREEN_HEIGHT // 3, CLEAN_BLUE, self.font_large, alpha)
+                self._draw_text_with_fade(screen, f"LAYER {self.current_level} CLEARED", 
+                                         SCREEN_HEIGHT // 3, CLEAN_GREEN, self.font_large, alpha)
             else:
                 # Show "Level Complete" fully
-                self._draw_text_with_fade(screen, f"Level {self.current_level} Complete!", 
-                                         SCREEN_HEIGHT // 3, CLEAN_BLUE, self.font_large, 255)
+                self._draw_text_with_fade(screen, f"LAYER {self.current_level} CLEARED", 
+                                         SCREEN_HEIGHT // 3, CLEAN_GREEN, self.font_large, 255)
             
-            # Draw next level text
+            # === NEW: Draw users freed text ===
+            # Show between progress 0.25 and 1.0 (appears after "Level Complete" fades in)
+            if progress > 0.25:
+                # Fade in during 0.25-0.35
+                if progress < 0.35:
+                    alpha = int(((progress - 0.25) / 0.1) * 255)
+                else:
+                    alpha = 255
+                
+                # Format the number with commas and convert to billions
+                if users_freed >= 1_000_000_000:
+                    # Show as billions (e.g., "1.2B")
+                    billions = users_freed / 1_000_000_000
+                    users_text = f"{billions:.1f}B USERS FREED"
+                else:
+                    # Show as millions (e.g., "800M")
+                    millions = users_freed / 1_000_000
+                    users_text = f"{int(millions)}M USERS FREED"
+                
+                self._draw_text_with_fade(screen, users_text,
+                                         SCREEN_HEIGHT // 3 + 80,  # Below "Level Complete"
+                                         (0, 255, 255),  # Cyan color
+                                         self.font_medium, alpha)
+            
+            # === ORIGINAL: Draw next level text ===
             if progress > 0.4:
                 alpha = int(((progress - 0.4) / 0.6) * 255)
-                self._draw_text_with_fade(screen, f"Entering Level {self.next_level}...", 
+                self._draw_text_with_fade(screen, f"Entering Layer {self.next_level}...", 
                                          SCREEN_HEIGHT // 2, CORRUPTION_PURPLE, self.font_medium, alpha)
             
-            # Draw loading bar
+            # === ORIGINAL: Draw loading bar ===
             if progress > 0.5:
                 self._draw_loading_bar(screen, (progress - 0.5) / 0.5)
             
-            # Draw tips
+            # === ORIGINAL: Draw tips ===
             if progress > 0.6:
                 alpha = int(((progress - 0.6) / 0.4) * 255)
-                tip = "Tip: Use cover to your advantage!"
+                tip = "Tip: Adapt your configuration to the threat!"
                 self._draw_text_with_fade(screen, tip, 
                                          SCREEN_HEIGHT * 2 // 3 + 80, UI_CYAN, self.font_small, alpha)
             
