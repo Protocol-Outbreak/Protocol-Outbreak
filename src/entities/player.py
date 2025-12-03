@@ -41,6 +41,7 @@ class Player:
         self.max_hp = 100 + (self.stats['max_health'] * 20)
         self.hp = self.max_hp
         self.last_damage_time = 0
+        self.dmg_color = (255, 0, 0) # Red color for when damage is taken
         
         # Invulnerability Shield (3 second protection when level starts)
         self.invulnerable = False
@@ -118,6 +119,9 @@ class Player:
         self.xp += amount # currently buffed amount of xp earned for testing purposes
         if self.xp >= self.xp_to_next_level:
             self.level_up(game)
+
+    def take_damage(self, amount):
+        self.hp -= amount
     
     def level_up(self, game=None):
         self.level += 1

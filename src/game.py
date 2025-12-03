@@ -308,7 +308,7 @@ class Game:
             # Deal contact damage (skip if invulnerable)
             current_time = pygame.time.get_ticks()
             if not self.player.invulnerable and (not hasattr(enemy, 'last_contact_damage') or current_time - enemy.last_contact_damage > 1000):
-                self.player.hp -= 5 * dmg_multi
+                self.player.take_damage(5 * dmg_multi)
                 self.player.last_damage_time = current_time
                 enemy.last_contact_damage = current_time           
                 if self.player.hp <= 0:
@@ -391,7 +391,7 @@ class Game:
                 dist = math.sqrt((bullet.x - self.player.x)**2 + (bullet.y - self.player.y)**2)
                 if dist < self.player.size and not self.player.invulnerable:  # Check invulnerability
                     dmg_multi = 1 + (self.current_level_number * 0.1)
-                    self.player.hp -= bullet.damage * dmg_multi
+                    self.player.take_damage(bullet.damage * dmg_multi)
                     self.player.last_damage_time = pygame.time.get_ticks()
                     if bullet in self.bullets:
                         self.bullets.remove(bullet)

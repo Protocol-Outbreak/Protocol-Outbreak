@@ -5,6 +5,9 @@ import os
 import random
 import math
 
+from story_intro import StoryIntro
+
+
 WIDTH, HEIGHT = 1280, 720
 FPS = 60
 
@@ -187,29 +190,66 @@ class MenuApp:
         return surface
 
     def run(self):
+        """
+        Main menu loop.
+        Handles showing the menu, then the intro, then starting the game.
+        Returns True to start game, False to quit.
+        """
+        # These track whether we're showing the intro
+        intro = None  # Will hold the StoryIntro object
+        showing_intro = False  # Flag: are we showing intro?
+        
         while True:
             dt = self.clock.tick(FPS) / 1000
             
-            # Update laser position
+            # Update laser scan animation
             self.laser_y += self.laser_speed * dt
             if self.laser_y > HEIGHT:
                 self.laser_y = 0
             
-            # ADD THIS - Update drones
+            # Update background drones
             for drone in self.drones:
                 drone.update(dt)
             
+            # === EVENT HANDLING ===
             for e in pg.event.get():
+                # Window close button clicked
                 if e.type == pg.QUIT:
-                    return False
+                    return False  # Quit the game
+                
+                # ESC key pressed
                 if e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE:
-                    return False
-                if e.type == pg.MOUSEBUTTONDOWN and e.button == 1:
+                    if showing_intro:
+                        # If watching intro, skip it
+                        return True  # Go straight to game
+                    else:
+                        # If on menu, quit
+                        return False
+                
+                # Mouse clicked
+                if e.type == pg.MOUSEBUTTONDOWN and e.button == 1:  # Left click
                     mx, my = pg.mouse.get_pos()
-                    if self.start_button.collidepoint(mx, my):
-                        return True
-
-            self.draw_menu()
+                    
+                    # Check if they clicked the start button (and we're not already showing intro)
+                    if self.start_button.collidepoint(mx, my) and not showing_intro:
+                        # Create the intro, passing screen dimensions
+                        intro = StoryIntro(self.screen, WIDTH, HEIGHT)
+                        showing_intro = True  # Set the flag
+            
+            # === UPDATE INTRO ===
+            if showing_intro and intro is not None:
+                # Update intro (returns True when finished)
+                if intro.update():
+                    return True  # Intro done, start the game!
+            
+            # === DRAWING ===
+            if showing_intro and intro is not None:
+                # Draw the intro screens
+                intro.draw()
+            else:
+                # Draw the normal menu
+                self.draw_menu()
+            
             pg.display.flip()
 
     def draw_laser_scan(self):
