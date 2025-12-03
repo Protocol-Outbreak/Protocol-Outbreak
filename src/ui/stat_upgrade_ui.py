@@ -24,7 +24,7 @@ class StatUpgradeUI:
         self.stat_order = [
             'health_regen',
             'max_health',
-            'body_damage',
+            #'body_damage',
             'bullet_speed',
             'bullet_penetration',
             'bullet_damage',
@@ -36,7 +36,7 @@ class StatUpgradeUI:
         self.stat_names = {
             'health_regen': 'Health Regen',
             'max_health': 'Max Health',
-            'body_damage': 'Body Damage',
+            #'body_damage': 'Body Damage',
             'bullet_speed': 'Bullet Speed',
             'bullet_penetration': 'Bullet Pen',
             'bullet_damage': 'Bullet Damage',
@@ -48,7 +48,7 @@ class StatUpgradeUI:
         self.stat_colors = {
             'health_regen': (255, 100, 100),   # Red
             'max_health': (180, 80, 80),       # Dark red
-            'body_damage': (220, 180, 80),     # Gold
+            #'body_damage': (220, 180, 80),     # Gold
             'bullet_speed': (100, 180, 255),   # Light blue
             'bullet_penetration': (80, 140, 255), # Blue
             'bullet_damage': (255, 180, 80),   # Orange

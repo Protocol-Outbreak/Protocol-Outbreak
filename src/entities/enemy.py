@@ -60,32 +60,25 @@ class Enemy:
             self.shoot_delay = 45
             self.xp_value = 50
             self.aggro_range = 400
-            '''
-        elif enemy_type == EnemyType.SNIPER:
-            self.health = 60 * diff_multi
-            self.max_health = 60 * diff_multi
-            self.speed = 0  # Stationary
-            self.shoot_delay = 120  # Slow fire rate
-            self.xp_value = 30
-            self.aggro_range = 700  # Very long sight range
-            self.deaggro_range = 800
-            self.size = 25
         elif enemy_type == EnemyType.BOSS:
+            # === BOSS CONFIGURATION ===
             self.is_boss = True
-            self.health = 500 * diff_multi
-            self.max_health = 500 * diff_multi
-            self.size = 90  # 3x bigger
-            self.speed = 0.8  # Slower but still moves
+            self.max_health = 15000 * diff_multi
+            self.health = self.max_health 
+            self.size = 90  # 3x bigger than normal (30 * 3)
+            self.speed = 0.8  # Slower but still mobile
             self.shoot_delay = 30  # Faster shooting
-            self.xp_value = 200
-            self.aggro_range = 600
-            self.can_spawn_enemies = True
-            self.spawn_cooldown = 600  # 10 seconds at 60fps
-            self.spawn_timer = self.spawn_cooldown
-            self.shield_cooldown = 420  # 7 seconds
-            self.z_index = 100  # Draw boss on top
-        '''
-    
+            self.xp_value = 500  # Big XP reward
+            self.aggro_range = 600  # Longer aggro range
+            
+            # Shield system - activates at health thresholds
+            self.shield_thresholds = [0.75, 0.5, 0.25]  # 75%, 50%, 25% health
+            self.shield_used = []  # Track which thresholds have been used
+            self.shield_duration_max = 180  # 3 seconds (at 60fps)
+            
+            self.z_index = 100  # Draw boss on top of everything
+
+
     def take_damage(self, damage):
         """Handle taking damage and trigger aggro"""
         # If shield is active, reduce damage
@@ -117,64 +110,74 @@ class Enemy:
         if self.is_aggroed and distance > 0:
             self.angle = math.atan2(dy, dx)
             
-            # Movement based on type
+            # === MOVEMENT BASED ON TYPE ===
             if self.type == EnemyType.TRIANGLE_BLADE:
+                # Melee - charge directly at player
                 self.x += (dx / distance) * self.speed
                 self.y += (dy / distance) * self.speed
+            
             elif self.type == EnemyType.SQUARE_TURRET:
+                # Turret - stay at medium-long range
                 if distance > 400:
                     self.x += (dx / distance) * self.speed * 0.3
                     self.y += (dy / distance) * self.speed * 0.3
+            
             elif self.type == EnemyType.PENTAGON_GUNNER:
+                # Gunner - maintain medium range
                 if distance < 300:
                     self.x -= (dx / distance) * self.speed
                     self.y -= (dy / distance) * self.speed
                 elif distance > 400:
                     self.x += (dx / distance) * self.speed
                     self.y += (dy / distance) * self.speed
-
-            '''
-            elif self.type == EnemyType.SNIPER:
-                # Completely stationary - just aim
-                pass
+            
             elif self.type == EnemyType.BOSS:
-                # Boss keeps medium distance
+                # Boss - maintains medium distance (250-400 range)
                 if distance < 250:
+                    # Too close - back away
                     self.x -= (dx / distance) * self.speed
                     self.y -= (dy / distance) * self.speed
-                elif distance > 350:
+                elif distance > 400:
+                    # Too far - move closer
                     self.x += (dx / distance) * self.speed
                     self.y += (dy / distance) * self.speed
+                # Between 250-400: maintain position (no movement)
             
-            '''
-            # Shooting
+            # === SHOOTING ===
             self.shoot_cooldown -= 1
             if self.shoot_cooldown <= 0 and self.shoot_delay > 0:
-                # Check range for shooting
-                shoot_range = 800 #if self.type == EnemyType.SNIPER else 500
+                shoot_range = 500
                 if distance < shoot_range:
                     self.shoot(bullets)
                     self.shoot_cooldown = self.shoot_delay
+
         else:
-            # Idle behavior
+            # Idle behavior when not aggroed
             self.angle += 0.02
-    
+            
     def _update_boss_shield(self):
-        """Update boss shield mechanics"""
-        # Update shield duration
+        """
+        Boss shield activates at 75%, 50%, and 25% health.
+        Shield lasts 3 seconds and blocks 90% damage.
+        """
+        # Update active shield duration
         if self.shield_active:
             self.shield_duration -= 1
             if self.shield_duration <= 0:
                 self.shield_active = False
-                self.shield_cooldown = 420  # 7 seconds cooldown
         
-        # Update shield cooldown
-        if not self.shield_active and self.shield_cooldown > 0:
-            self.shield_cooldown -= 1
-            if self.shield_cooldown <= 0:
-                # Activate shield
-                self.shield_active = True
-                self.shield_duration = 180  # 3 seconds of shield
+        # Check if boss has crossed a health threshold
+        if not self.shield_active:
+            current_health_percent = self.health / self.max_health
+            
+            for threshold in self.shield_thresholds:
+                # Check if boss crossed this threshold and hasn't used it yet
+                if current_health_percent <= threshold and threshold not in self.shield_used:
+                    # Activate shield!
+                    self.shield_active = True
+                    self.shield_duration = self.shield_duration_max
+                    self.shield_used.append(threshold)  # Mark this threshold as used
+                    break  # Only activate one shield at a time
     
     def update_boss_spawning(self):
         """Check if boss should spawn enemies - called from game.py"""
@@ -205,18 +208,20 @@ class Enemy:
             for i in range(5):
                 angle_offset = (i - 2) * 0.3
                 bullets.append(Bullet(self.x, self.y, self.angle + angle_offset, 7, 8 * dmg_multi, 2, "enemy"))
-        '''
-        elif self.type == EnemyType.SNIPER:
-            # High damage, fast bullet
-            bullets.append(Bullet(self.x, self.y, self.angle, 15, 25 * dmg_multi, 5, "enemy"))
         elif self.type == EnemyType.BOSS:
-            # 5-way shot with bigger bullets
+            # === BOSS SHOOTING: 5-way shot with bigger, faster bullets ===
             for i in range(5):
                 angle_offset = (i - 2) * 0.25
-                bullet = Bullet(self.x, self.y, self.angle + angle_offset, 9, 15 * dmg_multi, 4, "enemy")
-                bullet.radius = 10  # Bigger bullets
+                bullet = Bullet(
+                    self.x, 
+                    self.y, 
+                    self.angle + angle_offset, 
+                    10,  # Faster bullets
+                    20 * dmg_multi,  # More damage
+                    10,  # Bigger radius (normal is 3-4)
+                    "enemy"
+                )
                 bullets.append(bullet)
-        '''
     
     def draw(self, screen, camera_x, camera_y):
         screen_x = int(self.x - camera_x)
@@ -243,20 +248,34 @@ class Enemy:
                  screen_y + math.sin(self.angle - 2.4) * self.size)
             ]
             pygame.draw.polygon(screen, color, points, 2)
+        # In the draw() method, update the pentagon/boss section:
+
         elif self.type == EnemyType.PENTAGON_GUNNER or self.type == EnemyType.BOSS:
             if self.is_boss:
+                # Boss coloring
                 color = (255, 50, 50) if self.is_aggroed else (200, 100, 0)
                 thickness = 4
             else:
+                # Normal pentagon coloring
                 color = (255, 100, 100) if self.is_aggroed else CORRUPTION_ORANGE
                 thickness = 2
             
+            # Draw pentagon shape
             points = []
             for i in range(5):
                 angle = self.angle + (i * math.pi * 2 / 5)
                 points.append((screen_x + math.cos(angle) * self.size,
-                             screen_y + math.sin(angle) * self.size))
+                            screen_y + math.sin(angle) * self.size))
             pygame.draw.polygon(screen, color, points, thickness)
+
+        # ... health bar code stays the same ...
+
+        # Boss name tag
+        if self.is_boss:
+            font = pygame.font.Font(None, 24)
+            name_text = font.render("CORRUPTION CORE", True, (255, 50, 50))
+            text_rect = name_text.get_rect(center=(screen_x, screen_y - self.size - 30))
+            screen.blit(name_text, text_rect)
         '''
         elif self.type == EnemyType.SNIPER:
             color = (150, 0, 200) if self.is_aggroed else (100, 0, 150)

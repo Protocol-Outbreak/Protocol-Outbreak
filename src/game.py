@@ -94,7 +94,7 @@ class Game:
         print(f"{'='*60}")
 
         # RESET TIMER FOR NEW LEVEL
-        self.elapsed_time = 0
+        #self.elapsed_time = 0
         self.time_up = False
         
         # Generate map from JSON
@@ -116,8 +116,9 @@ class Game:
             # Get spawn points from map
             self.player_spawn_point = map_result['player_spawn']
             self.enemy_spawn_points = map_result.get('enemy_spawns', [])
+            self.boss_spawn_point = map_result.get('boss_spawn', None)  # ← ADD THIS
             
-            # Respawn player at center
+            # Respawn player at spawn point
             spawn_x, spawn_y = self.player_spawn_point
             self.player.x = spawn_x
             self.player.y = spawn_y
@@ -131,8 +132,18 @@ class Game:
             self.enemies.clear()
             self.bullets.clear()
 
-            # Spawn enemies
+            # === SPAWN ENEMIES ===
             self.spawn_enemies(self.current_level_number)
+            
+            # === SPAWN BOSS IF LEVEL HAS ONE ===
+            if self.boss_spawn_point is not None:
+                boss_x, boss_y = self.boss_spawn_point
+                print(f"   🔴 Boss spawn detected at ({boss_x}, {boss_y})")
+                self.spawn_boss(boss_x, boss_y)
+            else:
+                # No boss on this level
+                self.has_boss = False
+                self.boss_enemy = None
 
             # Track initial enemy count for progress bar
             self.initial_enemy_count = len(self.enemies)
@@ -147,32 +158,50 @@ class Game:
             print(f"   Walls: {len(self.walls)}")
             print(f"   World size: {self.world_width}x{self.world_height}")
             print(f"   Spawn point: ({spawn_x}, {spawn_y})")
+            print(f"   Enemies: {len(self.enemies)} ({'+BOSS' if self.has_boss else 'no boss'})")
             print(f"{'='*60}\n")
         else:
             print(f"❌ Failed to load level {level_number}, using empty map")
             self.walls = []
-    
-    def spawn_enemies(self, current_lvl): # Difficulty
+
+
+    def spawn_enemies(self, current_lvl):
+        """Spawn regular enemies (excluding boss)"""
         spawn_points = self.enemy_spawn_points
+        
+        # === REGULAR ENEMY TYPES ONLY (no boss) ===
+        regular_enemy_types = [
+            EnemyType.SQUARE_TURRET,
+            EnemyType.TRIANGLE_BLADE,
+            EnemyType.PENTAGON_GUNNER
+        ]
+        
         for i in range(len(spawn_points)):
             spawn_x, spawn_y = spawn_points[i]
-            enemy_type = random.choice(list(EnemyType)) # change this to choose what enemy type is
+            # Choose only from regular enemies (boss excluded)
+            enemy_type = random.choice(regular_enemy_types)
             self.enemies.append(Enemy(spawn_x, spawn_y, enemy_type, current_lvl))
+        
+        print(f"   Spawned {len(spawn_points)} regular enemies")
+    def spawn_boss(self, x=None, y=None):
+        """
+        Spawn a boss enemy at specified location.
+        If no location provided, spawns at center of world.
+        """ 
+        if x is None:
+            x = self.world_width // 2
+        if y is None:
+            y = self.world_height // 2
+        
+        # Create boss enemy
+        boss = Enemy(x, y, EnemyType.BOSS, self.current_level_number)
+        self.enemies.append(boss)
+        self.boss_enemy = boss  # Keep reference
+        self.has_boss = True
+        
+        return boss
 
-        '''
-        for _ in range(count):
-            # Spawn away from player
-            while True:
-                x = random.randint(100, self.world_width - 100)
-                y = random.randint(100, self.world_height - 100)
-                dist = math.sqrt((x - self.player.x)**2 + (y - self.player.y)**2)
-                if dist > 400:
-                    break
-            
-            enemy_type = random.choice(list(EnemyType))
-            self.enemies.append(Enemy(x, y, enemy_type))
-        '''
-    
+
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -215,7 +244,7 @@ class Game:
         """Handle transition to next level or victory screen"""
         
         # === CHECK IF THIS WAS THE FINAL LEVEL ===
-        if self.current_level_number == 1:
+        if self.current_level_number == 5:
             # Player completed layer 5 (the 6th and final layer)
             # Show VICTORY screen instead of transition
             
@@ -448,41 +477,67 @@ class Game:
     
     def _handle_player_death(self):
         """Handle player death and game over screen"""
-        print('trying to attempt')
+        print('Player death - showing game over screen')
         self.player.hp = 0
         
         # Calculate final score: (level * 100) + (enemies killed * 50)
         enemies_killed = self.initial_enemy_count - len(self.enemies)
         final_score = (self.player.level * 100) + (enemies_killed * 50)
 
-        game_over = GameOverScreen(score=final_score)  # ✅ FIXED - Now using final_score!
+        game_over = GameOverScreen(score=final_score)
         result = game_over.run()
         
         if result == 'retry':
+            # === RESET PLAYER ===
             self.player.hp = self.player.max_hp
-            x,y = self.player_spawn_point
+            x, y = self.player_spawn_point
             self.player.x = x
             self.player.y = y
-            # These comments allow for the level, xp, and skill points to be saved after every point
-            #self.player.level = 1
-            #self.player.xp = 0
-            #self.player.skill_points = 0
+            
+            # Optional: Reset level/XP (currently commented out)
+            # self.player.level = 1
+            # self.player.xp = 0
+            # self.player.skill_points = 0
+            
+            # === CLEAR GAME STATE ===
             self.enemies.clear()
             self.bullets.clear()
             self.particle_system.clear()
+            
+            # === RESPAWN ENEMIES ===
             self.spawn_enemies(self.current_level_number)
             
-            # RESET TIMER
+            # === RESPAWN BOSS IF LEVEL HAS ONE ===
+            if self.boss_spawn_point is not None:
+                boss_x, boss_y = self.boss_spawn_point
+                print(f"   Respawning boss at ({boss_x}, {boss_y})")
+                self.spawn_boss(boss_x, boss_y)
+            else:
+                # No boss on this level
+                self.has_boss = False
+                self.boss_enemy = None
+            
+            # === RESET LEVEL TRACKING ===
+            self.initial_enemy_count = len(self.enemies)
+            self.level_complete = False
+            
+            # === RESET TIMER ===
             self.elapsed_time = 0
             self.time_up = False
+            
+            print(f"   Level retry: {len(self.enemies)} enemies spawned")
+            if self.has_boss:
+                print(f"   Boss respawned!")
         
         elif result == 'menu':
             self.running = False
             return 'menu'
         else:
             self.running = False
+        
         return None
-    
+
+
     # ========== MAIN UPDATE METHOD ==========
     
     def update(self):
@@ -693,6 +748,95 @@ class Game:
             self.level_complete
         )
 
+                # === BOSS HEALTH BAR (if boss exists) ===
+        if self.has_boss and self.boss_enemy is not None and self.boss_enemy in self.enemies:
+            # Boss is alive - draw health bar
+            boss = self.boss_enemy
+            
+            # Position (below enemy progress bar)
+            boss_bar_x = SCREEN_WIDTH // 2 - 300  # Center, 600px wide
+            boss_bar_y = 150  # Below timer
+            boss_bar_width = 600
+            boss_bar_height = 40
+            
+            # === BOSS NAME LABEL ===
+            boss_name_font = pygame.font.Font(None, 32)
+            boss_name = boss_name_font.render("⚠️ CORRUPTION CORE ⚠️", True, (255, 50, 50))
+            name_rect = boss_name.get_rect(center=(SCREEN_WIDTH // 2, boss_bar_y - 20))
+            
+            # Name background
+            name_bg_rect = name_rect.inflate(40, 15)
+            name_bg = pygame.Surface(name_bg_rect.size, pygame.SRCALPHA)
+            name_bg.fill((0, 0, 0, 200))
+            self.screen.blit(name_bg, name_bg_rect.topleft)
+            pygame.draw.rect(self.screen, (255, 50, 50), name_bg_rect, 2)
+            
+            self.screen.blit(boss_name, name_rect)
+            
+            # === HEALTH BAR BACKGROUND ===
+            bar_bg = pygame.Surface((boss_bar_width, boss_bar_height), pygame.SRCALPHA)
+            bar_bg.fill((0, 0, 0, 230))
+            self.screen.blit(bar_bg, (boss_bar_x, boss_bar_y))
+            
+            # Calculate health percentage
+            health_percent = max(0, boss.health / boss.max_health)
+            
+            # Health bar color based on percentage
+            if health_percent > 0.75:
+                health_color = (255, 100, 0)  # Orange - full health
+            elif health_percent > 0.5:
+                health_color = (255, 150, 0)  # Orange-yellow
+            elif health_percent > 0.25:
+                health_color = (255, 200, 0)  # Yellow - getting low
+            else:
+                health_color = (255, 50, 50)  # Red - critical
+            
+            # === FILL HEALTH BAR ===
+            fill_width = int((boss_bar_width - 4) * health_percent)
+            if fill_width > 0:
+                pygame.draw.rect(self.screen, health_color,
+                                (boss_bar_x + 2, boss_bar_y + 2, fill_width, boss_bar_height - 4))
+            
+            # === SHIELD INDICATOR ===
+            if boss.shield_active:
+                # Draw pulsing shield overlay
+                pulse = abs(math.sin(pygame.time.get_ticks() * 0.008))
+                shield_alpha = int(100 + pulse * 100)
+                
+                shield_overlay = pygame.Surface((boss_bar_width - 4, boss_bar_height - 4), pygame.SRCALPHA)
+                shield_overlay.fill((100, 200, 255, shield_alpha))
+                self.screen.blit(shield_overlay, (boss_bar_x + 2, boss_bar_y + 2))
+                
+                # Shield text
+                shield_font = pygame.font.Font(None, 24)
+                shield_text = shield_font.render("🛡️ SHIELD ACTIVE 🛡️", True, (200, 255, 255))
+                shield_rect = shield_text.get_rect(center=(SCREEN_WIDTH // 2, boss_bar_y + boss_bar_height // 2))
+                self.screen.blit(shield_text, shield_rect)
+            
+            # === BORDER ===
+            pygame.draw.rect(self.screen, health_color, 
+                            (boss_bar_x, boss_bar_y, boss_bar_width, boss_bar_height), 3)
+            
+            # === HP TEXT ===
+            hp_font = pygame.font.Font(None, 28)
+            hp_text = hp_font.render(f"{int(boss.health)}/{int(boss.max_health)} HP", True, WHITE)
+            hp_rect = hp_text.get_rect(center=(SCREEN_WIDTH // 2, boss_bar_y + boss_bar_height // 2))
+            
+            # Don't draw HP text if shield is active (would overlap)
+            if not boss.shield_active:
+                self.screen.blit(hp_text, hp_rect)
+            
+            # === SHIELD PHASE INDICATORS ===
+            # Show which shield phases are remaining
+            phase_y = boss_bar_y + boss_bar_height + 10
+            phase_font = pygame.font.Font(None, 20)
+            
+            # Check which thresholds haven't been used yet
+            remaining_shields = []
+            for threshold in boss.shield_thresholds:
+                if threshold not in boss.shield_used:
+                    remaining_shields.append(int(threshold * 100))
+            
         # Level Complete Button
         if self.level_complete:
             self.level_progress_ui.draw_next_level_button(self.screen)

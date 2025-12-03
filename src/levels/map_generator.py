@@ -42,44 +42,47 @@ class MapGenerator:
             
             # Extract level name from path
             level_name = os.path.splitext(os.path.basename(json_path))[0]
-            
+
             print(f"\n🗺️  Generating map: {level_name}")
             print(f"   Source: {metadata['source_file']}")
             print(f"   Grid: {metadata['width']}x{metadata['height']} pixels")
             print(f"   World: {metadata['world_width']}x{metadata['world_height']} units")
             print(f"   Wall pixels: {metadata['wall_pixel_count']}")
-            
+
             # Generate optimized walls from grid
             walls, barriers = MapGenerator._grid_to_walls(grid, metadata)
-            
-            # Add border walls
-            '''
-            border_walls = MapGenerator._create_border_walls(
-                metadata['world_width'],
-                metadata['world_height']
-            )
-            walls.extend(border_walls)
-            '''
-            
-            # Calculate spawn point (center of map)
+
+            # Calculate spawn point (center of map as fallback)
             player_spawn = tuple(metadata.get('player_spawn', [
                 metadata['world_width'] // 2,
                 metadata['world_height'] // 2
             ]))
 
-            enemy_spawns = [tuple(spawn) for spawn in metadata.get('enemy_spawns', [])] # get all spawn points for enemies
-            
+            # Get enemy spawn points (convert to tuples)
+            enemy_spawns = [tuple(spawn) for spawn in metadata.get('enemy_spawns', [])]
+
+            # === GET BOSS SPAWN POINT ===
+            boss_spawn_data = metadata.get('boss_spawn', None)
+            if boss_spawn_data is not None:
+                boss_spawn = tuple(boss_spawn_data)  # Convert list to tuple
+                print(f"   🔴 Boss spawn: {boss_spawn}")
+            else:
+                boss_spawn = None
+
             map_size = (metadata['world_width'], metadata['world_height'])
-            
+
             print(f"   ✅ Generated {len(walls)} wall objects")
-            print(f"   Spawn: {player_spawn}")
-            
+            print(f"   ✅ Generated {len(barriers)} barrier objects")
+            print(f"   Player spawn: {player_spawn}")
+            print(f"   Enemy spawns: {len(enemy_spawns)} locations")
+
             return {
                 'walls': walls,
                 'barriers': barriers,
                 'metadata': metadata,
                 'player_spawn': player_spawn,
                 'enemy_spawns': enemy_spawns,
+                'boss_spawn': boss_spawn,  # ← ADD THIS LINE
                 'map_size': map_size,
                 'level_name': level_name
             }
