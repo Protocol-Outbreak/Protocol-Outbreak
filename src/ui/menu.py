@@ -392,9 +392,9 @@ class MenuApp:
             "Upgrade 7 different stats",
             "",
             "LEVEL 5: Choose tank path",
-            "  • GUNNER - Area control",
-            "  • SNIPER - Precision damage",
-            "  • SPRAYER - Fire rate",
+            " GUNNER - Area control",
+            " SNIPER - Precision damage",
+            " SPRAYER - Fire rate",
             "",
             "Levels 10 & 15: Auto-evolve",
             "Each path has 3 tiers total"
@@ -476,7 +476,7 @@ class MenuApp:
         # FOOTER
         # ========================================
         # Warning
-        warning = self.small_font.render("⚠️ As you descend deeper, corruption intensifies. Adapt or perish.", True, WHITE)
+        warning = self.small_font.render("As you descend deeper, corruption intensifies. Adapt or perish.", True, WHITE)
         self.screen.blit(warning, (WIDTH//2 - warning.get_width()//2, HEIGHT - 58))
 
         # Developers

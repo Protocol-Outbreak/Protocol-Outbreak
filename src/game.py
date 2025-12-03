@@ -599,7 +599,7 @@ class Game:
             
             # === FIXED NOTIFICATION ===
             self.notification_manager.add_notification(
-                f"🔧 EVOLVED: {old_tank} → {target_tank.name}",
+                f" EVOLVED: {old_tank} -> {target_tank.name}",
                 x=SCREEN_WIDTH // 2,
                 y=250,
                 duration=4.0,

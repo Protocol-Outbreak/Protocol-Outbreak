@@ -26,21 +26,21 @@ class PathSelectionUI:
             TankPath.GUNNER: {
                 "name": "GUNNER PATH",
                 "key": "1",
-                "progression": "Twin → Triplet → Penta Shot",
+                "progression": "Twin -> Triplet -> Penta Shot",
                 "playstyle": "Area control, bullet spam, crowd clearing",
                 "color": (100, 255, 100)
             },
             TankPath.SNIPER: {
                 "name": "SNIPER PATH",
                 "key": "2",
-                "progression": "Sniper → Marksman → Railgun",
+                "progression": "Sniper -> Marksman -> Railgun",
                 "playstyle": "Long range, precision, boss killer",
                 "color": (100, 150, 255)
             },
             TankPath.SPRAYER: {
                 "name": "SPRAYER PATH",
                 "key": "3",
-                "progression": "Machine Gun → Gatling → Minigun",
+                "progression": "Machine Gun -> Gatling -> Minigun",
                 "playstyle": "Suppressive fire, maximum DPS",
                 "color": (255, 150, 100)
             }
@@ -129,7 +129,7 @@ class PathSelectionUI:
         self.screen.blit(subtitle, subtitle_rect)
         
         # Warning
-        warning = self.small_font.render("⚠️ This choice is permanent ⚠️", True, (255, 200, 0))
+        warning = self.small_font.render("This choice is permanent", True, (255, 200, 0))
         warning_rect = warning.get_rect(center=(SCREEN_WIDTH // 2, 200))
         self.screen.blit(warning, warning_rect)
         
