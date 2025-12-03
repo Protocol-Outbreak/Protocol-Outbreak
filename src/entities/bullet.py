@@ -19,6 +19,8 @@ class Bullet:
         # Calculate velocity
         self.vx = math.cos(angle) * speed
         self.vy = math.sin(angle) * speed
+
+        self.hit_enemies = []  # Track which enemies this bullet already hit
         
     def update(self):
         self.x += self.vx

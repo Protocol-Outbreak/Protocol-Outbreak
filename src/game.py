@@ -19,6 +19,8 @@ from src.ui.minimap import Minimap
 from src.entities.particle import ParticleSystem
 from src.ui.notification import NotificationManager
 from src.ui.victory_screen import VictoryScreen
+from src.ui.path_selection_ui import PathSelectionUI
+from src.utils.enums import TankPath
 
 
 class Game:
@@ -74,6 +76,10 @@ class Game:
         self.time_limit = 24 * 60 # minutes (24 minutes)
         self.elapsed_time = 0
         self.time_up = False
+
+        # Path selection tracking
+        self.path_selection_shown = False  # Has player seen path selection yet?
+        self.pending_tank_upgrade = None  # Tank to upgrade to
 
         # Load first level
         self.load_level(0)
@@ -212,21 +218,28 @@ class Game:
                 elif event.key == pygame.K_m:  # ADD THIS
                     self.minimap.toggle()
                 elif event.key == pygame.K_1:
-                    self.player.tank_type = TankType.BASIC
-                elif event.key == pygame.K_2 and self.player.level >= 3:
-                    self.player.tank_type = TankType.TWIN
-                elif event.key == pygame.K_3 and self.player.level >= 6:
-                    self.player.tank_type = TankType.TRIPLET
-                elif event.key == pygame.K_4 and self.player.level >= 9:
-                    self.player.tank_type = TankType.QUAD
-                elif event.key == pygame.K_5 and self.player.level >= 12:
-                    self.player.tank_type = TankType.OCTO
-                elif event.key == pygame.K_6 and self.player.level >= 15:
-                    self.player.tank_type = TankType.PENTA_SHOT
-                elif event.key == pygame.K_7 and self.player.level >= 18:
-                    self.player.tank_type = TankType.SNIPER
-                elif event.key == pygame.K_8 and self.player.level >= 21:
-                    self.player.tank_type = TankType.MACHINE_GUN
+                    if self.player.level >= 5 and self.player.can_use_tank(TankType.TWIN):
+                        self.player.tank_type = TankType.TWIN
+                elif event.key == pygame.K_2:
+                    if self.player.level >= 5 and self.player.can_use_tank(TankType.SNIPER):
+                        self.player.tank_type = TankType.SNIPER
+                    elif self.player.level >= 15 and self.player.can_use_tank(TankType.TRIPLET):
+                        self.player.tank_type = TankType.TRIPLET
+                elif event.key == pygame.K_3:
+                    if self.player.level >= 5 and self.player.can_use_tank(TankType.MACHINE_GUN):
+                        self.player.tank_type = TankType.MACHINE_GUN
+                    elif self.player.level >= 15 and self.player.can_use_tank(TankType.MARKSMAN):
+                        self.player.tank_type = TankType.MARKSMAN
+                elif event.key == pygame.K_4:
+                    if self.player.level >= 15 and self.player.can_use_tank(TankType.GATLING):
+                        self.player.tank_type = TankType.GATLING
+                elif event.key == pygame.K_5:
+                    if self.player.level >= 25 and self.player.can_use_tank(TankType.PENTA_SHOT):
+                        self.player.tank_type = TankType.PENTA_SHOT
+                    elif self.player.level >= 25 and self.player.can_use_tank(TankType.RAILGUN):
+                        self.player.tank_type = TankType.RAILGUN
+                    elif self.player.level >= 25 and self.player.can_use_tank(TankType.MINIGUN):
+                        self.player.tank_type = TankType.MINIGUN
                 elif event.key == pygame.K_c:  # Press 'C' to clear all enemies for testing purposes
                     self.enemies.clear() 
 
@@ -407,10 +420,19 @@ class Game:
         for bullet in self.bullets[:]:
             if bullet.owner_type == "player":
                 for enemy in self.enemies[:]:
+                    # Skip if we already hit this enemy
+                    if enemy in bullet.hit_enemies:
+                        continue
+                    
                     dist = math.sqrt((bullet.x - enemy.x)**2 + (bullet.y - enemy.y)**2)
                     if dist < enemy.size:
                         enemy.take_damage(bullet.damage)
-                        bullet.health -= 20
+                        
+                        # === DIFFERENT PENETRATION COST PER ENEMY TYPE ===
+                        penetration_cost = self.get_enemy_penetration_cost(enemy)
+                        bullet.health -= penetration_cost
+                        
+                        bullet.hit_enemies.append(enemy)  # Mark as hit
                         
                         if enemy.health <= 0:
                             # CREATE EXPLOSION WHEN ENEMY DIES
@@ -428,7 +450,27 @@ class Game:
                         
                         if bullet.health <= 0 and bullet in self.bullets:
                             self.bullets.remove(bullet)
-                        break
+                            break  # Bullet is dead, stop checking
+
+    def get_enemy_penetration_cost(self, enemy):
+        """
+        How much bullet health is consumed when hitting this enemy type
+        Lower = easier to penetrate
+        """
+        from src.utils.enums import EnemyType
+        
+        if enemy.type == EnemyType.SQUARE_TURRET:
+            return 20  # Easiest - weak armor
+        elif enemy.type == EnemyType.TRIANGLE_BLADE:
+            return 50  # Medium - fast but fragile
+        elif enemy.type == EnemyType.PENTAGON_GUNNER:
+            return 100  # Hard - tough armor
+        elif enemy.type == EnemyType.BOSS:
+            return 500  # Hardest - massive armor
+        else:
+            return 20  # Default
+
+
 
     def get_enemy_color(self, enemy):
         """Get the color for an enemy based on type"""
@@ -538,6 +580,30 @@ class Game:
         return None
 
 
+    def check_for_auto_upgrade(self):
+        """Check if player should auto-upgrade their tank"""
+        if not self.player.path_locked:
+            return
+        
+        # Get what tank they should have at this level
+        target_tank = self.player.get_current_path_tank_for_level()
+        
+        # If it's different from current, upgrade!
+        if target_tank != self.player.tank_type:
+            old_tank = self.player.tank_type.name
+            self.player.tank_type = target_tank
+            
+            # === FIXED NOTIFICATION ===
+            self.notification_manager.add_notification(
+                f"🔧 EVOLVED: {old_tank} → {target_tank.name}",
+                x=SCREEN_WIDTH // 2,
+                y=250,
+                duration=4.0,
+                font_size=42,
+                color=(0, 255, 100)
+            )
+
+
     # ========== MAIN UPDATE METHOD ==========
     
     def update(self):
@@ -553,6 +619,15 @@ class Game:
         if self.elapsed_time >= self.time_limit and not self.time_up:
             self.time_up = True
             return self._handle_player_death()
+
+        if self.player.level >= 5 and not self.path_selection_shown and not self.player.path_locked:
+            # Pause game and show path selection
+            self.show_path_selection()
+            self.path_selection_shown = True
+        
+        # === CHECK FOR AUTO TANK UPGRADES (Level 10, 15) ===
+        if self.player.level in [15, 25] and self.player.path_locked:
+            self.check_for_auto_upgrade()
 
         # Store player's old position
         old_x = self.player.x
@@ -649,6 +724,34 @@ class Game:
         self.draw_ui()
         
         pygame.display.flip()
+    
+    def show_path_selection(self):
+        """Show path selection UI at level 5"""
+        path_ui = PathSelectionUI(self.screen)
+        chosen_path = path_ui.show()
+        
+        if chosen_path:
+            self.player.choose_path(chosen_path)
+            
+            # Auto-upgrade to tier 1 of chosen path
+            self.check_for_auto_upgrade()
+            
+            # Show confirmation notification
+            path_names = {
+                TankPath.GUNNER: "GUNNER",
+                TankPath.SNIPER: "SNIPER",
+                TankPath.SPRAYER: "SPRAYER"
+            }
+            
+            # === FIXED NOTIFICATION ===
+            self.notification_manager.add_notification(
+                f"PATH LOCKED: {path_names.get(chosen_path, 'UNKNOWN')}",
+                x=SCREEN_WIDTH // 2,
+                y=200,
+                duration=5.0,
+                font_size=36,
+                color=(255, 215, 0)
+            )
     
     def draw_ui(self):
         # ===== INVULNERABILITY SHIELD VISUAL =====
