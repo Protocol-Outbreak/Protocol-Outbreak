@@ -1,4 +1,3 @@
-# story_intro.py
 import pygame as pg
 import random
 
@@ -159,3 +158,6 @@ class StoryIntro:
             self.width // 2 - skip_text.get_width() // 2,
             self.height - 50
         ))
+
+if __name__ == "__main__":
+       print("story_intro.py loaded successfully!")

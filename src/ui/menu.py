@@ -1,11 +1,10 @@
-# Menu UI for GAME2500 Final Project - Neural Cleanse Theme
 import sys
 import pygame as pg
 import os
 import random
 import math
 
-from story_intro import StoryIntro
+from src.ui.story_intro import StoryIntro
 
 
 WIDTH, HEIGHT = 1280, 720
