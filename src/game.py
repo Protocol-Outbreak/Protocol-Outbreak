@@ -3,6 +3,7 @@ import random
 import math
 
 from src.ui.game_over import GameOverScreen
+from src.ui.game_won import GameWonScreen
 from src.entities.player import Player
 from src.entities.enemy import Enemy
 #from src.levels.level_manager import LevelManager
@@ -215,7 +216,29 @@ class Game:
         """Handle transition to next level"""
         next_level = self.current_level_number + 1
         
-        # Show transition screen
+        # Check if player completed the final level (Level 4)
+        if next_level > 4:
+            # Show game won screen
+            enemies_killed = self.initial_enemy_count - len(self.enemies)
+            final_score = (self.player.level * 100) + (enemies_killed * 50)
+            
+            game_won = GameWonScreen(final_score, levels_completed=5)
+            result = game_won.run(self.screen)
+            
+            if result == 'menu':
+                self.running = False
+                return 'menu'
+            elif result == 'restart':
+                # Reset everything and start from level 0
+                self.player.level = 1
+                self.player.xp = 0
+                self.player.skill_points = 0
+                self.player.hp = self.player.max_hp
+                self.load_level(0)
+            
+            return None
+        
+        # Show transition screen for next level
         transition = LevelTransition(self.current_level_number, next_level)
         if transition.show(self.screen):
             # Load next level
