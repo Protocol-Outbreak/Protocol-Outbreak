@@ -6,6 +6,8 @@ from src.entities.bullet import Bullet
 from src.systems.tank_renderer import TankRenderer
 from src.systems.attack_system import ShootingSystem
 from src.configs.tank_configs import TANK_CONFIGS
+from src.utils.enums import TankType, TankPath
+
 
 
 class Player:
@@ -28,12 +30,18 @@ class Player:
             'movement_speed': 0
         }
         
-        self.level = 1
+        self.level = 4
         self.xp = 0
         self.xp_to_next_level = 100
         self.skill_points = 0
         
         # Tank Default
+        self.chosen_path = TankPath.NONE  # No path chosen yet
+        self.path_locked = False  # Has player locked in their choice?
+    
+        # Track available tanks in chosen path
+        self.available_tanks_in_path = [TankType.BASIC]  # Start with basic
+
         tank_default = TANK_CONFIGS.get(self.tank_type.name)
 
         
@@ -41,6 +49,7 @@ class Player:
         self.max_hp = 100 + (self.stats['max_health'] * 20)
         self.hp = self.max_hp
         self.last_damage_time = 0
+        self.dmg_color = (255, 0, 0) # Red color for when damage is taken
         
         # Invulnerability Shield (3 second protection when level starts)
         self.invulnerable = False
@@ -118,6 +127,9 @@ class Player:
         self.xp += amount # currently buffed amount of xp earned for testing purposes
         if self.xp >= self.xp_to_next_level:
             self.level_up(game)
+
+    def take_damage(self, amount):
+        self.hp -= amount
     
     def level_up(self, game=None):
         self.level += 1
@@ -138,22 +150,62 @@ class Player:
                 color=(100, 255, 100)
             )
         
-        if self.level == 1:
-            self.tank_type = TankType.BASIC
-        elif self.level == 3:
-            self.tank_type = TankType.TWIN
-        elif self.level == 6:
-            self.tank_type = TankType.TRIPLET
-        elif self.level == 9:
-            self.tank_type = TankType.QUAD
-        elif self.level == 12:
-            self.tank_type = TankType.OCTO
-        elif self.level == 15:
-            self.tank_type = TankType.PENTA_SHOT
-        elif self.level == 18:
-            self.tank_type = TankType.SNIPER
-        elif self.level == 21:
-            self.tank_type = TankType.MACHINE_GUN
+        if self.level in [15, 25]:
+            game.check_for_auto_upgrade()
     
     def draw(self, screen, camera_x, camera_y):
         TankRenderer.draw_tank(screen, self, camera_x, camera_y)
+    
+
+    # Add this new method to Player class:
+    def choose_path(self, path):
+        """
+        Lock in a tank path choice
+        """
+        if self.path_locked:
+            return False  # Already chose
+        
+        self.chosen_path = path
+        self.path_locked = True
+        
+        # Set available tanks for this path
+        if path == TankPath.GUNNER:
+            self.available_tanks_in_path = [TankType.TWIN, TankType.TRIPLET, TankType.PENTA_SHOT]
+        elif path == TankPath.SNIPER:
+            self.available_tanks_in_path = [TankType.SNIPER, TankType.MARKSMAN, TankType.RAILGUN]
+        elif path == TankPath.SPRAYER:
+            self.available_tanks_in_path = [TankType.MACHINE_GUN, TankType.GATLING, TankType.MINIGUN]
+        
+        return True
+
+    def can_use_tank(self, tank_type):
+        """Check if player can use this tank type"""
+        if not self.path_locked:
+            return tank_type == TankType.BASIC
+        
+        return tank_type in self.available_tanks_in_path
+
+    def get_current_path_tank_for_level(self):
+        """Get the tank player should have based on their level and path"""
+        if not self.path_locked:
+            return TankType.BASIC
+        
+        # Map paths to progressions
+        progressions = {
+            TankPath.GUNNER: {5: TankType.TWIN, 15: TankType.TRIPLET, 25: TankType.PENTA_SHOT},
+            TankPath.SNIPER: {5: TankType.SNIPER, 15: TankType.MARKSMAN, 25: TankType.RAILGUN},
+            TankPath.SPRAYER: {5: TankType.MACHINE_GUN, 15: TankType.GATLING, 25: TankType.MINIGUN}
+        }
+        
+        if self.chosen_path not in progressions:
+            return TankType.BASIC
+        
+        progression = progressions[self.chosen_path]
+        
+        # Find highest tier player has unlocked
+        available_levels = [lvl for lvl in progression.keys() if lvl <= self.level]
+        if not available_levels:
+            return TankType.BASIC
+        
+        highest_level = max(available_levels)
+        return progression[highest_level]

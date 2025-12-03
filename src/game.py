@@ -19,6 +19,9 @@ from src.ui.level_progress_ui import LevelProgressUI
 from src.ui.minimap import Minimap
 from src.entities.particle import ParticleSystem
 from src.ui.notification import NotificationManager
+from src.ui.victory_screen import VictoryScreen
+from src.ui.path_selection_ui import PathSelectionUI
+from src.utils.enums import TankPath
 
 
 class Game:
@@ -71,9 +74,13 @@ class Game:
         self.next_level_button_rect = None
 
         # Time limit
-        self.time_limit = 180 # seconds (3 minutes)
+        self.time_limit = 24 * 60 # minutes (24 minutes)
         self.elapsed_time = 0
         self.time_up = False
+
+        # Path selection tracking
+        self.path_selection_shown = False  # Has player seen path selection yet?
+        self.pending_tank_upgrade = None  # Tank to upgrade to
 
         # Load first level
         self.load_level(0)
@@ -94,7 +101,7 @@ class Game:
         print(f"{'='*60}")
 
         # RESET TIMER FOR NEW LEVEL
-        self.elapsed_time = 0
+        #self.elapsed_time = 0
         self.time_up = False
         
         # Generate map from JSON
@@ -116,8 +123,9 @@ class Game:
             # Get spawn points from map
             self.player_spawn_point = map_result['player_spawn']
             self.enemy_spawn_points = map_result.get('enemy_spawns', [])
+            self.boss_spawn_point = map_result.get('boss_spawn', None)  # ← ADD THIS
             
-            # Respawn player at center
+            # Respawn player at spawn point
             spawn_x, spawn_y = self.player_spawn_point
             self.player.x = spawn_x
             self.player.y = spawn_y
@@ -131,8 +139,18 @@ class Game:
             self.enemies.clear()
             self.bullets.clear()
 
-            # Spawn enemies
+            # === SPAWN ENEMIES ===
             self.spawn_enemies(self.current_level_number)
+            
+            # === SPAWN BOSS IF LEVEL HAS ONE ===
+            if self.boss_spawn_point is not None:
+                boss_x, boss_y = self.boss_spawn_point
+                print(f"   🔴 Boss spawn detected at ({boss_x}, {boss_y})")
+                self.spawn_boss(boss_x, boss_y)
+            else:
+                # No boss on this level
+                self.has_boss = False
+                self.boss_enemy = None
 
             # Track initial enemy count for progress bar
             self.initial_enemy_count = len(self.enemies)
@@ -147,32 +165,50 @@ class Game:
             print(f"   Walls: {len(self.walls)}")
             print(f"   World size: {self.world_width}x{self.world_height}")
             print(f"   Spawn point: ({spawn_x}, {spawn_y})")
+            print(f"   Enemies: {len(self.enemies)} ({'+BOSS' if self.has_boss else 'no boss'})")
             print(f"{'='*60}\n")
         else:
             print(f"❌ Failed to load level {level_number}, using empty map")
             self.walls = []
-    
-    def spawn_enemies(self, current_lvl): # Difficulty
+
+
+    def spawn_enemies(self, current_lvl):
+        """Spawn regular enemies (excluding boss)"""
         spawn_points = self.enemy_spawn_points
+        
+        # === REGULAR ENEMY TYPES ONLY (no boss) ===
+        regular_enemy_types = [
+            EnemyType.SQUARE_TURRET,
+            EnemyType.TRIANGLE_BLADE,
+            EnemyType.PENTAGON_GUNNER
+        ]
+        
         for i in range(len(spawn_points)):
             spawn_x, spawn_y = spawn_points[i]
-            enemy_type = random.choice(list(EnemyType)) # change this to choose what enemy type is
+            # Choose only from regular enemies (boss excluded)
+            enemy_type = random.choice(regular_enemy_types)
             self.enemies.append(Enemy(spawn_x, spawn_y, enemy_type, current_lvl))
+        
+        print(f"   Spawned {len(spawn_points)} regular enemies")
+    def spawn_boss(self, x=None, y=None):
+        """
+        Spawn a boss enemy at specified location.
+        If no location provided, spawns at center of world.
+        """ 
+        if x is None:
+            x = self.world_width // 2
+        if y is None:
+            y = self.world_height // 2
+        
+        # Create boss enemy
+        boss = Enemy(x, y, EnemyType.BOSS, self.current_level_number)
+        self.enemies.append(boss)
+        self.boss_enemy = boss  # Keep reference
+        self.has_boss = True
+        
+        return boss
 
-        '''
-        for _ in range(count):
-            # Spawn away from player
-            while True:
-                x = random.randint(100, self.world_width - 100)
-                y = random.randint(100, self.world_height - 100)
-                dist = math.sqrt((x - self.player.x)**2 + (y - self.player.y)**2)
-                if dist > 400:
-                    break
-            
-            enemy_type = random.choice(list(EnemyType))
-            self.enemies.append(Enemy(x, y, enemy_type))
-        '''
-    
+
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -183,21 +219,28 @@ class Game:
                 elif event.key == pygame.K_m:  # ADD THIS
                     self.minimap.toggle()
                 elif event.key == pygame.K_1:
-                    self.player.tank_type = TankType.BASIC
-                elif event.key == pygame.K_2 and self.player.level >= 3:
-                    self.player.tank_type = TankType.TWIN
-                elif event.key == pygame.K_3 and self.player.level >= 6:
-                    self.player.tank_type = TankType.TRIPLET
-                elif event.key == pygame.K_4 and self.player.level >= 9:
-                    self.player.tank_type = TankType.QUAD
-                elif event.key == pygame.K_5 and self.player.level >= 12:
-                    self.player.tank_type = TankType.OCTO
-                elif event.key == pygame.K_6 and self.player.level >= 15:
-                    self.player.tank_type = TankType.PENTA_SHOT
-                elif event.key == pygame.K_7 and self.player.level >= 18:
-                    self.player.tank_type = TankType.SNIPER
-                elif event.key == pygame.K_8 and self.player.level >= 21:
-                    self.player.tank_type = TankType.MACHINE_GUN
+                    if self.player.level >= 5 and self.player.can_use_tank(TankType.TWIN):
+                        self.player.tank_type = TankType.TWIN
+                elif event.key == pygame.K_2:
+                    if self.player.level >= 5 and self.player.can_use_tank(TankType.SNIPER):
+                        self.player.tank_type = TankType.SNIPER
+                    elif self.player.level >= 15 and self.player.can_use_tank(TankType.TRIPLET):
+                        self.player.tank_type = TankType.TRIPLET
+                elif event.key == pygame.K_3:
+                    if self.player.level >= 5 and self.player.can_use_tank(TankType.MACHINE_GUN):
+                        self.player.tank_type = TankType.MACHINE_GUN
+                    elif self.player.level >= 15 and self.player.can_use_tank(TankType.MARKSMAN):
+                        self.player.tank_type = TankType.MARKSMAN
+                elif event.key == pygame.K_4:
+                    if self.player.level >= 15 and self.player.can_use_tank(TankType.GATLING):
+                        self.player.tank_type = TankType.GATLING
+                elif event.key == pygame.K_5:
+                    if self.player.level >= 25 and self.player.can_use_tank(TankType.PENTA_SHOT):
+                        self.player.tank_type = TankType.PENTA_SHOT
+                    elif self.player.level >= 25 and self.player.can_use_tank(TankType.RAILGUN):
+                        self.player.tank_type = TankType.RAILGUN
+                    elif self.player.level >= 25 and self.player.can_use_tank(TankType.MINIGUN):
+                        self.player.tank_type = TankType.MINIGUN
                 elif event.key == pygame.K_c:  # Press 'C' to clear all enemies for testing purposes
                     self.enemies.clear() 
 
@@ -210,35 +253,12 @@ class Game:
                     elif self.level_complete and self.level_progress_ui.check_button_click(event.pos):
                             self.proceed_to_next_level()
 
-# Level Progression
-
+    # Level Progression
     def proceed_to_next_level(self):
         """Handle transition to next level"""
         next_level = self.current_level_number + 1
         
-        # Check if player completed the final level (Level 4)
-        if next_level > 4:
-            # Show game won screen
-            enemies_killed = self.initial_enemy_count - len(self.enemies)
-            final_score = (self.player.level * 100) + (enemies_killed * 50)
-            
-            game_won = GameWonScreen(final_score, levels_completed=5)
-            result = game_won.run(self.screen)
-            
-            if result == 'menu':
-                self.running = False
-                return 'menu'
-            elif result == 'restart':
-                # Reset everything and start from level 0
-                self.player.level = 1
-                self.player.xp = 0
-                self.player.skill_points = 0
-                self.player.hp = self.player.max_hp
-                self.load_level(0)
-            
-            return None
-        
-        # Show transition screen for next level
+        # Show transition screen
         transition = LevelTransition(self.current_level_number, next_level)
         if transition.show(self.screen):
             # Load next level
@@ -331,7 +351,7 @@ class Game:
             # Deal contact damage (skip if invulnerable)
             current_time = pygame.time.get_ticks()
             if not self.player.invulnerable and (not hasattr(enemy, 'last_contact_damage') or current_time - enemy.last_contact_damage > 1000):
-                self.player.hp -= 5 * dmg_multi
+                self.player.take_damage(5 * dmg_multi)
                 self.player.last_damage_time = current_time
                 enemy.last_contact_damage = current_time           
                 if self.player.hp <= 0:
@@ -373,10 +393,19 @@ class Game:
         for bullet in self.bullets[:]:
             if bullet.owner_type == "player":
                 for enemy in self.enemies[:]:
+                    # Skip if we already hit this enemy
+                    if enemy in bullet.hit_enemies:
+                        continue
+                    
                     dist = math.sqrt((bullet.x - enemy.x)**2 + (bullet.y - enemy.y)**2)
                     if dist < enemy.size:
                         enemy.take_damage(bullet.damage)
-                        bullet.health -= 20
+                        
+                        # === DIFFERENT PENETRATION COST PER ENEMY TYPE ===
+                        penetration_cost = self.get_enemy_penetration_cost(enemy)
+                        bullet.health -= penetration_cost
+                        
+                        bullet.hit_enemies.append(enemy)  # Mark as hit
                         
                         if enemy.health <= 0:
                             # CREATE EXPLOSION WHEN ENEMY DIES
@@ -394,7 +423,27 @@ class Game:
                         
                         if bullet.health <= 0 and bullet in self.bullets:
                             self.bullets.remove(bullet)
-                        break
+                            break  # Bullet is dead, stop checking
+
+    def get_enemy_penetration_cost(self, enemy):
+        """
+        How much bullet health is consumed when hitting this enemy type
+        Lower = easier to penetrate
+        """
+        from src.utils.enums import EnemyType
+        
+        if enemy.type == EnemyType.SQUARE_TURRET:
+            return 20  # Easiest - weak armor
+        elif enemy.type == EnemyType.TRIANGLE_BLADE:
+            return 50  # Medium - fast but fragile
+        elif enemy.type == EnemyType.PENTAGON_GUNNER:
+            return 100  # Hard - tough armor
+        elif enemy.type == EnemyType.BOSS:
+            return 500  # Hardest - massive armor
+        else:
+            return 20  # Default
+
+
 
     def get_enemy_color(self, enemy):
         """Get the color for an enemy based on type"""
@@ -414,7 +463,7 @@ class Game:
                 dist = math.sqrt((bullet.x - self.player.x)**2 + (bullet.y - self.player.y)**2)
                 if dist < self.player.size and not self.player.invulnerable:  # Check invulnerability
                     dmg_multi = 1 + (self.current_level_number * 0.1)
-                    self.player.hp -= bullet.damage * dmg_multi
+                    self.player.take_damage(bullet.damage * dmg_multi)
                     self.player.last_damage_time = pygame.time.get_ticks()
                     if bullet in self.bullets:
                         self.bullets.remove(bullet)
@@ -443,41 +492,91 @@ class Game:
     
     def _handle_player_death(self):
         """Handle player death and game over screen"""
-        print('trying to attempt')
+        print('Player death - showing game over screen')
         self.player.hp = 0
         
         # Calculate final score: (level * 100) + (enemies killed * 50)
         enemies_killed = self.initial_enemy_count - len(self.enemies)
         final_score = (self.player.level * 100) + (enemies_killed * 50)
 
-        game_over = GameOverScreen(score=final_score)  # ✅ FIXED - Now using final_score!
+        game_over = GameOverScreen(score=final_score)
         result = game_over.run()
         
         if result == 'retry':
+            # === RESET PLAYER ===
             self.player.hp = self.player.max_hp
-            x,y = self.player_spawn_point
+            x, y = self.player_spawn_point
             self.player.x = x
             self.player.y = y
-            # These comments allow for the level, xp, and skill points to be saved after every point
-            #self.player.level = 1
-            #self.player.xp = 0
-            #self.player.skill_points = 0
+            
+            # Optional: Reset level/XP (currently commented out)
+            # self.player.level = 1
+            # self.player.xp = 0
+            # self.player.skill_points = 0
+            
+            # === CLEAR GAME STATE ===
             self.enemies.clear()
             self.bullets.clear()
             self.particle_system.clear()
+            
+            # === RESPAWN ENEMIES ===
             self.spawn_enemies(self.current_level_number)
             
-            # RESET TIMER
+            # === RESPAWN BOSS IF LEVEL HAS ONE ===
+            if self.boss_spawn_point is not None:
+                boss_x, boss_y = self.boss_spawn_point
+                print(f"   Respawning boss at ({boss_x}, {boss_y})")
+                self.spawn_boss(boss_x, boss_y)
+            else:
+                # No boss on this level
+                self.has_boss = False
+                self.boss_enemy = None
+            
+            # === RESET LEVEL TRACKING ===
+            self.initial_enemy_count = len(self.enemies)
+            self.level_complete = False
+            
+            # === RESET TIMER ===
             self.elapsed_time = 0
             self.time_up = False
+            
+            print(f"   Level retry: {len(self.enemies)} enemies spawned")
+            if self.has_boss:
+                print(f"   Boss respawned!")
         
         elif result == 'menu':
             self.running = False
             return 'menu'
         else:
             self.running = False
+        
         return None
-    
+
+
+    def check_for_auto_upgrade(self):
+        """Check if player should auto-upgrade their tank"""
+        if not self.player.path_locked:
+            return
+        
+        # Get what tank they should have at this level
+        target_tank = self.player.get_current_path_tank_for_level()
+        
+        # If it's different from current, upgrade!
+        if target_tank != self.player.tank_type:
+            old_tank = self.player.tank_type.name
+            self.player.tank_type = target_tank
+            
+            # === FIXED NOTIFICATION ===
+            self.notification_manager.add_notification(
+                f"🔧 EVOLVED: {old_tank} → {target_tank.name}",
+                x=SCREEN_WIDTH // 2,
+                y=250,
+                duration=4.0,
+                font_size=42,
+                color=(0, 255, 100)
+            )
+
+
     # ========== MAIN UPDATE METHOD ==========
     
     def update(self):
@@ -493,6 +592,15 @@ class Game:
         if self.elapsed_time >= self.time_limit and not self.time_up:
             self.time_up = True
             return self._handle_player_death()
+
+        if self.player.level >= 5 and not self.path_selection_shown and not self.player.path_locked:
+            # Pause game and show path selection
+            self.show_path_selection()
+            self.path_selection_shown = True
+        
+        # === CHECK FOR AUTO TANK UPGRADES (Level 10, 15) ===
+        if self.player.level in [15, 25] and self.player.path_locked:
+            self.check_for_auto_upgrade()
 
         # Store player's old position
         old_x = self.player.x
@@ -590,6 +698,34 @@ class Game:
         
         pygame.display.flip()
     
+    def show_path_selection(self):
+        """Show path selection UI at level 5"""
+        path_ui = PathSelectionUI(self.screen)
+        chosen_path = path_ui.show()
+        
+        if chosen_path:
+            self.player.choose_path(chosen_path)
+            
+            # Auto-upgrade to tier 1 of chosen path
+            self.check_for_auto_upgrade()
+            
+            # Show confirmation notification
+            path_names = {
+                TankPath.GUNNER: "GUNNER",
+                TankPath.SNIPER: "SNIPER",
+                TankPath.SPRAYER: "SPRAYER"
+            }
+            
+            # === FIXED NOTIFICATION ===
+            self.notification_manager.add_notification(
+                f"PATH LOCKED: {path_names.get(chosen_path, 'UNKNOWN')}",
+                x=SCREEN_WIDTH // 2,
+                y=200,
+                duration=5.0,
+                font_size=36,
+                color=(255, 215, 0)
+            )
+    
     def draw_ui(self):
         # ===== INVULNERABILITY SHIELD VISUAL =====
         if self.player.invulnerable:
@@ -613,30 +749,67 @@ class Game:
             red_overlay.fill((255, 0, 0, int(flash_intensity * 0.4)))  # Red with varying alpha
             self.screen.blit(red_overlay, (0, 0))
         
-        # Time limit display (top center)
+        # ===== ENHANCED MISSION TIMER (SMART UNIT DISPLAY) =====
         remaining_time = max(0, self.time_limit - self.elapsed_time)
-        time_text_str = self.format_time(remaining_time)
-        
-        # Change color if time is running out
-        if remaining_time < 3:  # Red if less than 3 seconds
-            time_color = (255, 0, 0)
-        elif remaining_time < 5:  # Orange if less than 5 seconds
-            time_color = (255, 165, 0)
+
+        # === EDEN TIME DISPLAY ===
+        # If over 60 seconds, show as minutes:seconds
+        if remaining_time >= 60:
+            eden_minutes = int(remaining_time // 60)
+            eden_seconds = int(remaining_time % 60)
+            eden_display = f"{eden_minutes}:{eden_seconds:02d}m"
         else:
-            time_color = WHITE
-        
-        # Draw time with background for visibility
-        time_text = self.font.render(f"TIMER: {time_text_str}", True, time_color)
+            # Under 60 seconds, just show seconds
+            eden_display = f"{int(remaining_time)}s"
 
-        # Draw background box for time (with transparency)
+        # === REAL WORLD TIME DISPLAY (1 EDEN minute = 3 real hours) ===
+        real_total_hours = remaining_time / 60 * 3  # Convert to real hours
+
+        # If over 24 hours, show as days + hours
+        if real_total_hours >= 24:
+            real_days = int(real_total_hours // 24)
+            real_hours = int(real_total_hours % 24)
+            if real_hours > 0:
+                real_display = f"{real_days}d {real_hours}h"
+            else:
+                real_display = f"{real_days}d"
+        else:
+            # Under 24 hours, show as hours + minutes
+            real_hours = int(real_total_hours)
+            real_minutes = int((real_total_hours % 1) * 60)
+            if real_minutes > 0:
+                real_display = f"{real_hours}h {real_minutes}m"
+            else:
+                real_display = f"{real_hours}h"
+
+        # Format the full display string
+        timer_text = f"EDEN: {eden_display} | REAL: {real_display}"
+
+        # Change color based on urgency
+        if remaining_time < 300:  # Less than 5 minutes
+            time_color = (255, 0, 0)  # Red
+        elif remaining_time < 600:  # Less than 10 minutes
+            time_color = (255, 165, 0)  # Orange
+        else:
+            time_color = (0, 255, 255)  # Cyan
+
+        # Render the text
+        time_text = self.font.render(timer_text, True, time_color)
+
+        # Draw background box for visibility
         box_rect = time_text.get_rect(center=(SCREEN_WIDTH // 2, 70))
-        inflated_rect = box_rect.inflate(100, 10)
+        inflated_rect = box_rect.inflate(40, 20)
 
-        # Create transparent surface for background
+        # Create semi-transparent background
         bg_surface = pygame.Surface(inflated_rect.size, pygame.SRCALPHA)
-        pygame.draw.rect(bg_surface, (0, 0, 0, 0), bg_surface.get_rect())  # LAST NUMBER IS THE TRANSPARENCY
+        bg_surface.fill((0, 0, 0, 200))
         self.screen.blit(bg_surface, inflated_rect.topleft)
 
+        # Draw border
+        pygame.draw.rect(self.screen, time_color, inflated_rect, 2)
+
+        # Draw the timer text
+        self.screen.blit(time_text, box_rect)
         # Draw border (stays opaque)
         pygame.draw.rect(self.screen, time_color, inflated_rect, 2)
 
@@ -651,6 +824,95 @@ class Game:
             self.level_complete
         )
 
+                # === BOSS HEALTH BAR (if boss exists) ===
+        if self.has_boss and self.boss_enemy is not None and self.boss_enemy in self.enemies:
+            # Boss is alive - draw health bar
+            boss = self.boss_enemy
+            
+            # Position (below enemy progress bar)
+            boss_bar_x = SCREEN_WIDTH // 2 - 300  # Center, 600px wide
+            boss_bar_y = 150  # Below timer
+            boss_bar_width = 600
+            boss_bar_height = 40
+            
+            # === BOSS NAME LABEL ===
+            boss_name_font = pygame.font.Font(None, 32)
+            boss_name = boss_name_font.render("⚠️ CORRUPTION CORE ⚠️", True, (255, 50, 50))
+            name_rect = boss_name.get_rect(center=(SCREEN_WIDTH // 2, boss_bar_y - 20))
+            
+            # Name background
+            name_bg_rect = name_rect.inflate(40, 15)
+            name_bg = pygame.Surface(name_bg_rect.size, pygame.SRCALPHA)
+            name_bg.fill((0, 0, 0, 200))
+            self.screen.blit(name_bg, name_bg_rect.topleft)
+            pygame.draw.rect(self.screen, (255, 50, 50), name_bg_rect, 2)
+            
+            self.screen.blit(boss_name, name_rect)
+            
+            # === HEALTH BAR BACKGROUND ===
+            bar_bg = pygame.Surface((boss_bar_width, boss_bar_height), pygame.SRCALPHA)
+            bar_bg.fill((0, 0, 0, 230))
+            self.screen.blit(bar_bg, (boss_bar_x, boss_bar_y))
+            
+            # Calculate health percentage
+            health_percent = max(0, boss.health / boss.max_health)
+            
+            # Health bar color based on percentage
+            if health_percent > 0.75:
+                health_color = (255, 100, 0)  # Orange - full health
+            elif health_percent > 0.5:
+                health_color = (255, 150, 0)  # Orange-yellow
+            elif health_percent > 0.25:
+                health_color = (255, 200, 0)  # Yellow - getting low
+            else:
+                health_color = (255, 50, 50)  # Red - critical
+            
+            # === FILL HEALTH BAR ===
+            fill_width = int((boss_bar_width - 4) * health_percent)
+            if fill_width > 0:
+                pygame.draw.rect(self.screen, health_color,
+                                (boss_bar_x + 2, boss_bar_y + 2, fill_width, boss_bar_height - 4))
+            
+            # === SHIELD INDICATOR ===
+            if boss.shield_active:
+                # Draw pulsing shield overlay
+                pulse = abs(math.sin(pygame.time.get_ticks() * 0.008))
+                shield_alpha = int(100 + pulse * 100)
+                
+                shield_overlay = pygame.Surface((boss_bar_width - 4, boss_bar_height - 4), pygame.SRCALPHA)
+                shield_overlay.fill((100, 200, 255, shield_alpha))
+                self.screen.blit(shield_overlay, (boss_bar_x + 2, boss_bar_y + 2))
+                
+                # Shield text
+                shield_font = pygame.font.Font(None, 24)
+                shield_text = shield_font.render("🛡️ SHIELD ACTIVE 🛡️", True, (200, 255, 255))
+                shield_rect = shield_text.get_rect(center=(SCREEN_WIDTH // 2, boss_bar_y + boss_bar_height // 2))
+                self.screen.blit(shield_text, shield_rect)
+            
+            # === BORDER ===
+            pygame.draw.rect(self.screen, health_color, 
+                            (boss_bar_x, boss_bar_y, boss_bar_width, boss_bar_height), 3)
+            
+            # === HP TEXT ===
+            hp_font = pygame.font.Font(None, 28)
+            hp_text = hp_font.render(f"{int(boss.health)}/{int(boss.max_health)} HP", True, WHITE)
+            hp_rect = hp_text.get_rect(center=(SCREEN_WIDTH // 2, boss_bar_y + boss_bar_height // 2))
+            
+            # Don't draw HP text if shield is active (would overlap)
+            if not boss.shield_active:
+                self.screen.blit(hp_text, hp_rect)
+            
+            # === SHIELD PHASE INDICATORS ===
+            # Show which shield phases are remaining
+            phase_y = boss_bar_y + boss_bar_height + 10
+            phase_font = pygame.font.Font(None, 20)
+            
+            # Check which thresholds haven't been used yet
+            remaining_shields = []
+            for threshold in boss.shield_thresholds:
+                if threshold not in boss.shield_used:
+                    remaining_shields.append(int(threshold * 100))
+            
         # Level Complete Button
         if self.level_complete:
             self.level_progress_ui.draw_next_level_button(self.screen)
@@ -661,9 +923,9 @@ class Game:
         bar_width = 300
         bar_height = 20
         
-        pygame.draw.rect(self.screen, UI_GRAY, (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(self.screen, UI_RED, (bar_x, bar_y, bar_width, bar_height))
         health_percent = self.player.hp / self.player.max_hp
-        pygame.draw.rect(self.screen, CLEAN_BLUE, 
+        pygame.draw.rect(self.screen, CLEAN_GREEN, 
                         (bar_x, bar_y, int(bar_width * health_percent), bar_height))
         
         health_text = self.font.render(f"HP: {int(self.player.hp)}/{self.player.max_hp}", 

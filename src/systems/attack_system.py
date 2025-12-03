@@ -24,6 +24,12 @@ class ShootingSystem:
         if "bullet_speed_bonus" in config:
             bullet_speed *= config["bullet_speed_bonus"]
         
+        bullet_health = 5 + (tank.stats['bullet_penetration'] * 10)
+    
+        # Add bonus from tank config (for RAILGUN, MARKSMAN)
+        if "penetration_bonus" in config:
+            bullet_health += config["penetration_bonus"] * 60  # Each bonus = +3 hits
+        
         offset = 30
         
         # Create bullet for each cannon
@@ -48,10 +54,16 @@ class ShootingSystem:
                 final_angle += random.uniform(-spread, spread)
             
             # Create bullet
-            bullets.append(Bullet(
+            bullet = Bullet(
                 bullet_x, bullet_y, final_angle,
                 bullet_speed, bullet_damage, bullet_pen, "player"
-            ))
+            )
+
+            # === SET BULLET HEALTH (PENETRATION) ===
+            bullet.health = bullet_health
+
+            # Add to bullets list
+            bullets.append(bullet)
         
         # Set cooldown
         tank.shoot_cooldown = tank.get_reload_speed() / config["reload_speed"]

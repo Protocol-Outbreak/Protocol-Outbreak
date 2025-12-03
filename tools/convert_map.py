@@ -89,47 +89,61 @@ class MapConverter:
             width, height = image.get_size()
             print(f"   Size: {width}x{height} pixels → {width*self.tile_size}x{height*self.tile_size} world units")
             
+
             # Convert to grid
             grid = []
             wall_count = 0
             barrier_count = 0
             enemy_spawns = []
             player_spawn = None
+            boss_spawn = None  # ← ADD THIS
 
             for y in range(height):
                 row = []
                 for x in range(width):
                     color = image.get_at((x, y))
 
+                    # Player spawn (green: 3aff00)
                     if color.g > 200 and color.r < 100 and color.b < 50:
                         row.append('player_spawn')
                         world_x = (x * self.tile_size) + (self.tile_size // 2)
                         world_y = (y * self.tile_size) + (self.tile_size // 2)
-                        player_spawn = [world_x,world_y]
+                        player_spawn = [world_x, world_y]
 
+                    # Enemy spawn (pink: ff00fa)
                     elif color.r > 200 and color.b > 200 and color.g < 50:
                         row.append("enemy_spawn")
                         world_x = (x * self.tile_size) + (self.tile_size // 2)
                         world_y = (y * self.tile_size) + (self.tile_size // 2)
-                        enemy_spawns.append([world_x,world_y])
+                        enemy_spawns.append([world_x, world_y])
 
+                    # === BOSS SPAWN (yellow: fffa00) ===
+                    elif color.r > 200 and color.g > 200 and color.b < 50:
+                        row.append('boss_spawn')
+                        world_x = (x * self.tile_size) + (self.tile_size // 2)
+                        world_y = (y * self.tile_size) + (self.tile_size // 2)
+                        boss_spawn = [world_x, world_y]
+
+                    # Barrier (red: ff0000)
                     elif color.r > 200 and color.g < 50 and color.b < 50:
                         row.append('barrier')
                         barrier_count += 1
 
+                    # Wall (black/dark gray)
                     elif color.r < 128 and color.g < 128 and color.b < 128:
                         row.append('wall')
                         wall_count += 1
+                    
                     else:
                         row.append('empty')
 
                 grid.append(row)
 
+            # Default player spawn if not found
             if player_spawn is None:
-                print("Did not create a spawn or did not use right color")
-                player_spawn = [(width * self.tile_size) // 2,(height * self.tile_size) // 2]
+                print("⚠️  No player spawn found, using center")
+                player_spawn = [(width * self.tile_size) // 2, (height * self.tile_size) // 2]
 
-            
             # Create JSON data
             map_data = {
                 'metadata': {
@@ -143,19 +157,22 @@ class MapConverter:
                     'barrier_pixel_count': barrier_count,
                     'player_spawn': player_spawn,
                     'enemy_spawns': enemy_spawns,
+                    'boss_spawn': boss_spawn,  # ← ADD THIS
                     'converted_at': datetime.now().isoformat()
                 },
                 'grid': grid
             }
-            
+
             # Save JSON
             with open(json_path, 'w') as f:
                 json.dump(map_data, f, indent=2)
-            
+
+            # Updated print statements
             print(f"   Walls: {wall_count} pixels")
             print(f"   Barriers: {barrier_count} pixels")
-            print(f"   Player spawn: {player_spawn}")  # ADD THIS
-            print(f"   Enemy spawns: {len(enemy_spawns)} locations")  # ADD THIS
+            print(f"   Player spawn: {player_spawn}")
+            print(f"   Enemy spawns: {len(enemy_spawns)} locations")
+            print(f"   Boss spawn: {boss_spawn if boss_spawn else 'None'}")  # ← ADD THIS
             print(f"   ✅ Saved: {os.path.basename(json_path)}")
             return True, 'converted'
             
