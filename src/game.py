@@ -22,6 +22,7 @@ from src.ui.notification import NotificationManager
 from src.ui.victory_screen import VictoryScreen
 from src.ui.path_selection_ui import PathSelectionUI
 from src.utils.enums import TankPath
+from src.systems.sound_manager import SoundManager
 
 
 class Game:
@@ -67,6 +68,10 @@ class Game:
         self.minimap = Minimap(self.world_width, self.world_height)
         self.particle_system = ParticleSystem()
         self.notification_manager = NotificationManager()
+        
+        # Sound system
+        self.sound_manager = SoundManager()
+        print("🔊 Sound system initialized")
 
         # Level progress
         self.initial_enemy_count = 0
@@ -84,6 +89,11 @@ class Game:
 
         # Load first level
         self.load_level(0)
+        
+        # Start background music
+        print("🎵 Starting background music...")
+        print('   Track: "Cyborg Ninja" by Kevin MacLeod (CC BY 4.0)')
+        self.sound_manager.play_music('background_music.mp3', loops=-1)
 
         # Spawn initial enemies
         #self.spawn_enemies(5)
@@ -382,7 +392,7 @@ class Game:
             # Deal contact damage (skip if invulnerable)
             current_time = pygame.time.get_ticks()
             if not self.player.invulnerable and (not hasattr(enemy, 'last_contact_damage') or current_time - enemy.last_contact_damage > 1000):
-                self.player.take_damage(5 * dmg_multi)
+                self.player.take_damage(5 * dmg_multi, self.sound_manager)
                 self.player.last_damage_time = current_time
                 enemy.last_contact_damage = current_time           
                 if self.player.hp <= 0:
@@ -432,6 +442,9 @@ class Game:
                     if dist < enemy.size:
                         enemy.take_damage(bullet.damage)
                         
+                        # Play hit sound
+                        self.sound_manager.play_sound('enemy_hit', volume_multiplier=0.4)
+                        
                         # === DIFFERENT PENETRATION COST PER ENEMY TYPE ===
                         penetration_cost = self.get_enemy_penetration_cost(enemy)
                         bullet.health -= penetration_cost
@@ -439,6 +452,9 @@ class Game:
                         bullet.hit_enemies.append(enemy)  # Mark as hit
                         
                         if enemy.health <= 0:
+                            # Play death sound
+                            self.sound_manager.play_sound('enemy_death', volume_multiplier=0.6)
+                            
                             # CREATE EXPLOSION WHEN ENEMY DIES
                             enemy_color = self.get_enemy_color(enemy)
                             self.particle_system.create_explosion(
@@ -494,7 +510,7 @@ class Game:
                 dist = math.sqrt((bullet.x - self.player.x)**2 + (bullet.y - self.player.y)**2)
                 if dist < self.player.size and not self.player.invulnerable:  # Check invulnerability
                     dmg_multi = 1 + (self.current_level_number * 0.1)
-                    self.player.take_damage(bullet.damage * dmg_multi)
+                    self.player.take_damage(bullet.damage * dmg_multi, self.sound_manager)
                     self.player.last_damage_time = pygame.time.get_ticks()
                     if bullet in self.bullets:
                         self.bullets.remove(bullet)
@@ -645,7 +661,7 @@ class Game:
         
         # Handle shooting
         if mouse_buttons[0] or keys[pygame.K_SPACE]:
-            self.player.shoot(self.bullets)
+            self.player.shoot(self.bullets, self.sound_manager)
         
         # Update bullets
         for bullet in self.bullets[:]:
@@ -673,6 +689,8 @@ class Game:
         # Check if level is complete
         if len(self.enemies) == 0 and self.initial_enemy_count > 0 and not self.level_complete:
             self.level_complete = True
+            # Play level complete sound
+            self.sound_manager.play_sound('level_complete', volume_multiplier=0.8)
         
         # Update camera
         self.camera_x = self.player.x - SCREEN_WIDTH // 2

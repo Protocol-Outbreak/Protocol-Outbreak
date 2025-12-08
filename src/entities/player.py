@@ -120,7 +120,12 @@ class Player:
             regen_amount = 0.5 + ((self.stats['health_regen'] + 1) * 0.3)
             self.hp = min(self.max_hp, self.hp + regen_amount)
     
-    def shoot(self, bullets):
+    def shoot(self, bullets, sound_manager=None):
+        # Only play sound if we're actually shooting (cooldown is 0)
+        if self.shoot_cooldown == 0 and sound_manager:
+            sound_manager.play_sound('shoot', volume_multiplier=0.3)
+        
+        # Create bullets (ShootingSystem checks cooldown internally)
         ShootingSystem.shoot(self, bullets)
     
     def gain_xp(self, amount, game=None):
@@ -128,8 +133,11 @@ class Player:
         if self.xp >= self.xp_to_next_level:
             self.level_up(game)
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, sound_manager=None):
         self.hp -= amount
+        # Play hit sound
+        if sound_manager:
+            sound_manager.play_sound('player_hit', volume_multiplier=0.7)
     
     def level_up(self, game=None):
         self.level += 1
